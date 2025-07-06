@@ -4,7 +4,7 @@
 
 *Rapid discovery. Reliable reconciliation. Transform weeks of manual asset auditing into hours of automated intelligence.*
 
-![RapidCMDB Dashboard](https://raw.githubusercontent.com/scottpeterman/rapidcmdb/refs/heads/main/screenshots/slides1.gif)
+![RapidCMDB Dashboard](screenshots/rapidcmdb-dashboard.gif)
 
 ## 🎯 The CMDB Reconciliation Problem
 
@@ -36,12 +36,7 @@ After:  RapidCMDB identified 847 devices across 23 sites in one weekend
 Result: Accurate asset valuation, accelerated integration, informed decisions
 ```
 
-### Fortune 500 CMDB Cleanup
-```
-Before: ServiceNow showed 1,200 network devices, Lansweeper showed 1,450
-After:  RapidCMDB cross-reference found 1,180 active + 270 stale records
-Result: Clean CMDB, optimized licensing, $180K annual savings
-```
+
 
 ## 🚀 Core Capabilities
 
@@ -68,14 +63,6 @@ Result: Clean CMDB, optimized licensing, $180K annual savings
 - **Compliance mapping** to regulatory frameworks (SOX, PCI-DSS, HIPAA)
 - **Risk assessment** based on device age, EOL status, and patch levels
 
-### 🔌 Enterprise Integration
-- **ServiceNow CMDB** (certified API integration, CSV templates)
-- **Lansweeper compatibility** with direct database correlation
-- **Device42 integration** for hybrid discovery approaches
-- **BMC Remedy** support with custom field mapping
-- **Excel/CSV export** with customizable templates for legacy systems
-- **REST API** for custom integrations and workflow automation
-- **PowerBI/Tableau** ready datasets for executive reporting
 
 ## 💡 Who RapidCMDB Is For
 
