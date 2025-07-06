@@ -1,0 +1,643 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Analysis: {{ filename }} - {{ app_name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item"><a href="{{ url_for('dashboard.index') }}">Dashboard</a></li>
+<li class="breadcrumb-item"><a href="{{ url_for('reports.index') }}">Reports</a></li>
+<li class="breadcrumb-item active">{{ filename }}</li>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <div>
+        <h1 class="h2 mb-1">Scan Analysis Report</h1>
+        <p class="text-muted mb-2">{{ filename }}</p>
+        <div class="d-flex gap-3 small text-muted">
+            <span><i class="bi bi-calendar me-1"></i>{{ analysis.analysis_timestamp|datetime }}</span>
+            <span><i class="bi bi-hdd me-1"></i>{{ analysis.total_devices|number_format }} devices</span>
+            <span><i class="bi bi-fingerprint me-1"></i>{{ analysis.unique_signatures }} signatures</span>
+        </div>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('reports.download_report', filename=filename) }}"
+           class="btn btn-success">
+            <i class="bi bi-download me-1"></i>
+            Download Report
+        </a>
+        <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-1"></i>
+            Back to Scans
+        </a>
+    </div>
+</div>
+
+{% set signatures = analysis.signatures %}
+
+<!-- Summary Statistics (calculated in Python) -->
+{% set vendor_counts = analysis.vendor_counts %}
+{% set device_type_counts = analysis.device_type_counts %}
+{% set high_confidence_count = 0 %}
+{% set napalm_supported_count = 0 %}
+{% set network_infrastructure_count = 0 %}
+
+<!-- Calculate summary statistics -->
+{% for sig_key, sig_data in signatures.items() %}
+    {% if sig_data.enhanced_confidence >= 80 %}
+        {% set high_confidence_count = high_confidence_count + sig_data.count %}
+    {% endif %}
+    {% if sig_data.napalm_supported %}
+        {% set napalm_supported_count = napalm_supported_count + sig_data.count %}
+    {% endif %}
+    {% if sig_data.device_type in ['router', 'switch', 'firewall', 'sdwan', 'load_balancer'] %}
+        {% set network_infrastructure_count = network_infrastructure_count + sig_data.count %}
+    {% endif %}
+{% endfor %}
+
+<!-- Summary Statistics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-value text-primary">{{ analysis.total_devices|number_format }}</div>
+                <div class="metric-label">Total Devices</div>
+                <div class="mt-2">
+                    <small class="text-info">
+                        <i class="bi bi-fingerprint me-1"></i>
+                        {{ analysis.unique_signatures }} unique signatures
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-value text-success">{{ high_confidence_count|number_format }}</div>
+                <div class="metric-label">High Confidence</div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-percent me-1"></i>
+                        {{ "%.1f"|format((high_confidence_count / analysis.total_devices * 100) if analysis.total_devices > 0 else 0) }}% of total
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-value text-warning">{{ napalm_supported_count|number_format }}</div>
+                <div class="metric-label">NAPALM Supported</div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-gear me-1"></i>
+                        Automation ready
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-value text-info">{{ network_infrastructure_count|number_format }}</div>
+                <div class="metric-label">Network Infrastructure</div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-diagram-3 me-1"></i>
+                        Core networking devices
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row mb-4">
+    <!-- Vendor Distribution Chart -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Vendor Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="vendorChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Type Distribution Chart -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Device Type Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container" style="height: 300px;">
+                    <canvas id="deviceTypeChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Scan Metadata -->
+{% if analysis.scan_metadata %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Scan Metadata
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for key, value in analysis.scan_metadata.items() %}
+                    <div class="col-md-4 mb-2">
+                        <div class="small text-muted">{{ key|title }}</div>
+                        <div class="fw-semibold">
+                            {% if value is iterable and value is not string %}
+                                {{ value|join(', ') }}
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Top Discoveries -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Top Device Discoveries</h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="toggleConfidenceFilter()">
+                        <i class="bi bi-funnel me-1"></i>
+                        Filter High Confidence
+                    </button>
+                    <button class="btn btn-outline-primary btn-sm" onclick="toggleNapalmFilter()">
+                        <i class="bi bi-gear me-1"></i>
+                        NAPALM Only
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover" id="discoveriesTable">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Vendor</th>
+                                <th>Device Type</th>
+                                <th class="text-center">Count</th>
+                                <th class="text-center">Confidence</th>
+                                <th class="text-center">NAPALM</th>
+                                <th class="text-center">Detection</th>
+                                <th>Sample IPs</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set sorted_signatures = signatures.items()|list|sort(attribute='1.enhanced_confidence', reverse=true)|sort(attribute='1.count', reverse=true) %}
+                            {% for sig_key, sig_data in sorted_signatures[:20] %}
+                            <tr data-confidence="{{ sig_data.enhanced_confidence }}" data-napalm="{{ sig_data.napalm_supported|lower }}">
+                                <td>{{ loop.index }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        {% if sig_data.enhanced_vendor in ['cisco', 'arista', 'juniper'] %}
+                                            <span class="badge bg-success me-2">NET</span>
+                                        {% elif sig_data.enhanced_vendor in ['palo_alto', 'fortinet', 'checkpoint'] %}
+                                            <span class="badge bg-danger me-2">SEC</span>
+                                        {% elif sig_data.enhanced_vendor in ['hp', 'dell', 'vmware'] %}
+                                            <span class="badge bg-info me-2">SRV</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary me-2">OTH</span>
+                                        {% endif %}
+                                        <span class="fw-semibold">{{ sig_data.enhanced_vendor|title }}</span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge {% if sig_data.device_type in ['router', 'switch', 'firewall'] %}bg-primary{% elif sig_data.device_type in ['server', 'ups'] %}bg-info{% else %}bg-secondary{% endif %}">
+                                        {{ sig_data.device_type|title }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="fw-bold">{{ sig_data.count|number_format }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        <div class="progress me-2" style="width: 60px; height: 6px;">
+                                            <div class="progress-bar {% if sig_data.enhanced_confidence >= 80 %}bg-success{% elif sig_data.enhanced_confidence >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                 style="width: {{ sig_data.enhanced_confidence }}%"></div>
+                                        </div>
+                                        <span class="small">{{ sig_data.enhanced_confidence }}%</span>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    {% if sig_data.napalm_supported %}
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i></span>
+                                    {% else %}
+                                        <span class="badge bg-secondary"><i class="bi bi-x-circle"></i></span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge {% if sig_data.detection_method == 'snmp' %}bg-info{% elif sig_data.detection_method == 'ssh' %}bg-success{% else %}bg-secondary{% endif %}">
+                                        {{ sig_data.detection_method|upper }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="small">
+                                        {% for ip in sig_data.sample_ips[:3] %}
+                                            <div>{{ ip }}</div>
+                                        {% endfor %}
+                                        {% if sig_data.sample_ips|length > 3 %}
+                                            <div class="text-muted">+{{ sig_data.sample_ips|length - 3 }} more</div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <button class="btn btn-outline-info btn-sm"
+                                            onclick="showDeviceDetails('{{ sig_key|e }}', {{ sig_data|tojson|e }})"
+                                            title="View Details">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Device Details Modal -->
+<div class="modal fade" id="deviceDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Device Signature Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="deviceDetailsContent">
+                    <!-- Content populated by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+
+<script>
+// Chart configurations
+if (typeof Chart !== 'undefined') {
+    Chart.defaults.color = '#c9d1d9';
+    Chart.defaults.borderColor = '#30363d';
+}
+
+const chartColors = [
+    '#238636', '#1f6feb', '#d29922', '#da3633', '#8957e5',
+    '#fb8500', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444',
+    '#06b6d4', '#8b5cf6', '#f97316', '#84cc16', '#ec4899'
+];
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Wait a bit for Chart.js to fully load
+    setTimeout(function() {
+        if (typeof Chart !== 'undefined') {
+            initializeCharts();
+        } else {
+            console.error('Chart.js failed to load');
+            // Hide chart containers if Chart.js failed to load
+            const chartContainers = document.querySelectorAll('.chart-container');
+            chartContainers.forEach(container => {
+                container.innerHTML = '<div class="text-center text-muted py-4"><p>Charts unavailable</p></div>';
+            });
+        }
+    }, 100);
+});
+
+function initializeCharts() {
+    // Check if Chart.js is loaded
+    if (typeof Chart === 'undefined') {
+        console.error('Chart.js not loaded');
+        return;
+    }
+
+    // Vendor Distribution Chart
+    const vendorData = {{ vendor_counts|tojson|safe }};
+    const vendorEntries = Object.entries(vendorData || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+    if (vendorEntries.length > 0) {
+        const vendorCtx = document.getElementById('vendorChart');
+        if (vendorCtx) {
+            new Chart(vendorCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: vendorEntries.map(([vendor, count]) => vendor.charAt(0).toUpperCase() + vendor.slice(1)),
+                    datasets: [{
+                        data: vendorEntries.map(([vendor, count]) => count),
+                        backgroundColor: chartColors.slice(0, vendorEntries.length),
+                        borderColor: '#21262d',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#c9d1d9',
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#161b22',
+                            titleColor: '#f0f6fc',
+                            bodyColor: '#c9d1d9',
+                            borderColor: '#30363d',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((context.raw / total) * 100).toFixed(1);
+                                    return `${context.label}: ${context.raw.toLocaleString()} devices (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Device Type Chart
+    const deviceTypeData = {{ device_type_counts|tojson|safe }};
+    const deviceTypeEntries = Object.entries(deviceTypeData || {}).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+    if (deviceTypeEntries.length > 0) {
+        const deviceTypeCtx = document.getElementById('deviceTypeChart');
+        if (deviceTypeCtx) {
+            new Chart(deviceTypeCtx, {
+                type: 'bar',
+                data: {
+                    labels: deviceTypeEntries.map(([type, count]) => type.charAt(0).toUpperCase() + type.slice(1)),
+                    datasets: [{
+                        label: 'Device Count',
+                        data: deviceTypeEntries.map(([type, count]) => count),
+                        backgroundColor: chartColors[0],
+                        borderColor: chartColors[1],
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: '#161b22',
+                            titleColor: '#f0f6fc',
+                            bodyColor: '#c9d1d9',
+                            borderColor: '#30363d',
+                            borderWidth: 1,
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw.toLocaleString()} devices`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#8b949e',
+                                callback: function(value) {
+                                    return Number.isInteger(value) ? value.toLocaleString() : '';
+                                }
+                            },
+                            grid: {
+                                color: '#21262d',
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#8b949e',
+                                maxRotation: 45
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    }
+}
+
+// Table filtering functions
+let confidenceFilter = false;
+let napalmFilter = false;
+
+function toggleConfidenceFilter() {
+    confidenceFilter = !confidenceFilter;
+    filterTable();
+
+    const btn = event.target.closest('button');
+    btn.classList.toggle('btn-outline-secondary', !confidenceFilter);
+    btn.classList.toggle('btn-primary', confidenceFilter);
+}
+
+function toggleNapalmFilter() {
+    napalmFilter = !napalmFilter;
+    filterTable();
+
+    const btn = event.target.closest('button');
+    btn.classList.toggle('btn-outline-primary', !napalmFilter);
+    btn.classList.toggle('btn-primary', napalmFilter);
+}
+
+function filterTable() {
+    const table = document.getElementById('discoveriesTable');
+    const rows = table.querySelectorAll('tbody tr');
+
+    rows.forEach(row => {
+        let show = true;
+
+        if (confidenceFilter) {
+            const confidence = parseInt(row.dataset.confidence);
+            if (confidence < 80) {
+                show = false;
+            }
+        }
+
+        if (napalmFilter) {
+            const napalm = row.dataset.napalm === 'true';
+            if (!napalm) {
+                show = false;
+            }
+        }
+
+        row.style.display = show ? '' : 'none';
+    });
+
+    // Update row numbers
+    const visibleRows = table.querySelectorAll('tbody tr:not([style*="display: none"])');
+    visibleRows.forEach((row, index) => {
+        row.querySelector('td:first-child').textContent = index + 1;
+    });
+}
+
+function showDeviceDetails(sigKey, sigData) {
+    try {
+        const modal = new bootstrap.Modal(document.getElementById('deviceDetailsModal'));
+
+        // Ensure sigData is properly parsed if it's a string
+        let deviceData = sigData;
+        if (typeof sigData === 'string') {
+            deviceData = JSON.parse(sigData);
+        }
+
+        const content = `
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <h6 class="text-primary">Device Information</h6>
+                    <table class="table table-sm table-dark">
+                        <tr>
+                            <td class="text-muted">Enhanced Vendor:</td>
+                            <td class="fw-semibold">${(deviceData.enhanced_vendor || 'unknown').charAt(0).toUpperCase() + (deviceData.enhanced_vendor || 'unknown').slice(1)}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Device Type:</td>
+                            <td><span class="badge bg-primary">${(deviceData.device_type || 'unknown').charAt(0).toUpperCase() + (deviceData.device_type || 'unknown').slice(1)}</span></td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Device Count:</td>
+                            <td class="fw-bold">${(deviceData.count || 0).toLocaleString()}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Detection Method:</td>
+                            <td><span class="badge bg-info">${(deviceData.detection_method || 'unknown').toUpperCase()}</span></td>
+                        </tr>
+                    </table>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="text-success">Analysis Metrics</h6>
+                    <table class="table table-sm table-dark">
+                        <tr>
+                            <td class="text-muted">Original Confidence:</td>
+                            <td>${deviceData.original_confidence || 0}%</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Enhanced Confidence:</td>
+                            <td class="fw-semibold text-${(deviceData.enhanced_confidence || 0) >= 80 ? 'success' : (deviceData.enhanced_confidence || 0) >= 60 ? 'warning' : 'danger'}">${deviceData.enhanced_confidence || 0}%</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">NAPALM Support:</td>
+                            <td>${deviceData.napalm_supported ? '<span class="badge bg-success"><i class="bi bi-check-circle"></i> Yes</span>' : '<span class="badge bg-secondary"><i class="bi bi-x-circle"></i> No</span>'}</td>
+                        </tr>
+                        <tr>
+                            <td class="text-muted">Original Vendor:</td>
+                            <td class="small text-muted">${deviceData.original_vendor || 'unknown'}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <h6 class="text-warning">Sample IP Addresses</h6>
+                <div class="d-flex flex-wrap gap-1">
+                    ${(deviceData.sample_ips || []).map(ip => `<span class="badge bg-dark border">${ip}</span>`).join('')}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <h6 class="text-info">System Description</h6>
+                <div class="border rounded p-3 bg-dark">
+                    <code class="text-light small">${deviceData.sys_descr || 'No description available'}</code>
+                </div>
+            </div>
+
+            ${(deviceData.normalized_sys_descr && deviceData.normalized_sys_descr !== deviceData.sys_descr) ? `
+            <div class="mb-3">
+                <h6 class="text-muted">Normalized Description</h6>
+                <div class="border rounded p-3 bg-dark">
+                    <code class="text-muted small">${deviceData.normalized_sys_descr}</code>
+                </div>
+                <small class="text-muted">Used for grouping similar devices</small>
+            </div>
+            ` : ''}
+        `;
+
+        document.getElementById('deviceDetailsContent').innerHTML = content;
+        modal.show();
+    } catch (error) {
+        console.error('Error showing device details:', error);
+        alert('Error displaying device details. Check console for more information.');
+    }
+}
+
+// Export functions
+function exportToCSV() {
+    const table = document.getElementById('discoveriesTable');
+    const rows = Array.from(table.querySelectorAll('tr'));
+
+    const csv = rows.map(row => {
+        const cells = Array.from(row.querySelectorAll('th, td'));
+        return cells.map(cell => `"${cell.textContent.trim()}"`).join(',');
+    }).join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `scan_analysis_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        toggleConfidenceFilter();
+    } else if (e.ctrlKey && e.key === 'n') {
+        e.preventDefault();
+        toggleNapalmFilter();
+    }
+});
+</script>
+{% endblock %}

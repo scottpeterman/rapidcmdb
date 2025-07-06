@@ -1,0 +1,539 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ app_name }}{% endblock %}
+
+{% block breadcrumb %}
+<li class="breadcrumb-item active">Dashboard</li>
+{% endblock %}
+
+{% block content %}
+<!-- Key Metrics Row -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-value text-primary">{{ device_stats.total or 0 }}</div>
+                <div class="metric-label">Total Devices</div>
+                <div class="mt-2">
+                    <small class="text-success">
+                        <i class="bi bi-plus-circle me-1"></i>
+                        {{ device_stats.recent or 0 }} added this week
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-value text-success">{{ "%.1f"|format(collection_stats.success_rate or 0) }}%</div>
+                <div class="metric-label">Collection Success</div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-clock me-1"></i>
+                        Avg: {{ "%.1f"|format(collection_stats.avg_duration or 0) }}s
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-value text-info">{{ health_metrics.avg_cpu or 0 }}%</div>
+                <div class="metric-label">Avg CPU Usage</div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-cpu me-1"></i>
+                        {{ health_metrics.monitored_devices or 0 }} monitored
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-lg-6 col-md-6 mb-3">
+        <div class="card metric-card">
+            <div class="card-body">
+                <div class="metric-value text-warning">{{ "%.1f"|format(health_metrics.avg_memory or 0) }}%</div>
+                <div class="metric-label">Avg Memory Usage</div>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        <i class="bi bi-memory me-1"></i>
+                        Across all devices
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Distribution Row -->
+<div class="row mb-4">
+    <!-- Device Distribution by Vendor -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Device Distribution by Vendor</h5>
+                <button class="btn btn-outline-secondary btn-sm" onclick="refreshChart('vendorChart')">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="vendorChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Device Distribution by Role -->
+    <div class="col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Device Distribution by Role</h5>
+                <button class="btn btn-outline-secondary btn-sm" onclick="refreshChart('roleChart')">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="roleChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row mb-4">
+    <!-- Site Statistics -->
+    <div class="col-xl-4 col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Sites Overview</h5>
+                <a href="{{ url_for('devices.list_devices') }}" class="btn btn-outline-primary btn-sm">
+                    View All <i class="bi bi-arrow-right"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                {% if site_stats %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-dark">
+                            <thead>
+                                <tr>
+                                    <th>Site</th>
+                                    <th class="text-center">Total</th>
+                                    <th class="text-center">Core</th>
+                                    <th class="text-center">Access</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for site in site_stats[:8] %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ site.site_code }}</strong>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary">{{ site.device_count }}</span>
+                                    </td>
+                                    <td class="text-center">{{ site.core_devices or 0 }}</td>
+                                    <td class="text-center">{{ site.access_devices or 0 }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-building-gear fs-1"></i>
+                        <p class="mt-2">No site data available</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- System Alerts -->
+    <div class="col-xl-4 col-lg-6 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">System Alerts</h5>
+                <button class="btn btn-outline-secondary btn-sm" onclick="refreshAlerts()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+            <div class="card-body" id="alertsContainer">
+                {% if alerts %}
+                    {% for alert in alerts %}
+                    <div class="alert alert-{{ alert.type }} d-flex align-items-center py-2 mb-2" role="alert">
+                        <div class="flex-shrink-0 me-3">
+                            {% if alert.type == 'danger' %}
+                                <i class="bi bi-exclamation-triangle fs-5"></i>
+                            {% elif alert.type == 'warning' %}
+                                <i class="bi bi-exclamation-circle fs-5"></i>
+                            {% elif alert.type == 'info' %}
+                                <i class="bi bi-info-circle fs-5"></i>
+                            {% else %}
+                                <i class="bi bi-check-circle fs-5"></i>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <div class="fw-semibold">{{ alert.title }}</div>
+                            <div class="small">{{ alert.message }}</div>
+                        </div>
+                        <div class="flex-shrink-0">
+                            <span class="badge bg-secondary">{{ alert.count }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-shield-check fs-1 text-success"></i>
+                        <p class="mt-2">All systems operational</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities -->
+    <div class="col-xl-4 col-lg-12 mb-4">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Activities</h5>
+                <button class="btn btn-outline-secondary btn-sm" onclick="refreshActivities()">
+                    <i class="bi bi-arrow-clockwise"></i>
+                </button>
+            </div>
+            <div class="card-body" id="activitiesContainer">
+                {% if recent_activities %}
+                    <div class="timeline">
+                        {% for activity in recent_activities %}
+                        <div class="timeline-item mb-3">
+                            <div class="d-flex">
+                                <div class="flex-shrink-0 me-3">
+                                    {% if activity.activity_type == 'config_change' %}
+                                        <i class="bi bi-file-earmark-code text-warning"></i>
+                                    {% elif activity.activity_type == 'device_discovery' %}
+                                        <i class="bi bi-plus-circle text-success"></i>
+                                    {% else %}
+                                        <i class="bi bi-circle text-info"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="small fw-semibold">{{ activity.device_name }}</div>
+                                    <div class="small text-muted">{{ activity.description }}</div>
+                                    <div class="small text-muted">
+                                        <i class="bi bi-clock me-1"></i>
+                                        {{ activity.timestamp|relative_time }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-activity fs-1"></i>
+                        <p class="mt-2">No recent activities</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Access Row -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Quick Access</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <a href="{{ url_for('devices.list_devices') }}" class="btn btn-outline-primary w-100 py-3">
+                            <i class="bi bi-hdd-network fs-4 d-block mb-2"></i>
+                            <div class="fw-semibold">Device Management</div>
+                            <small class="text-muted">View and manage all devices</small>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <a href="{{ url_for('reports.index') }}" class="btn btn-outline-success w-100 py-3">
+                            <i class="bi bi-graph-up fs-4 d-block mb-2"></i>
+                            <div class="fw-semibold">Reports</div>
+                            <small class="text-muted">View detailed reports</small>
+                        </a>
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+
+                    </div>
+                    <div class="col-lg-3 col-md-6 mb-3">
+                        <a href="#" onclick="showAlert('Configuration page coming soon!', 'info')" class="btn btn-outline-warning w-100 py-3">
+                            <i class="bi bi-gear fs-4 d-block mb-2"></i>
+                            <div class="fw-semibold">Configuration</div>
+                            <small class="text-muted">System settings</small>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Collection Status Row -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Collection Status</h5>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-outline-secondary btn-sm" onclick="refreshCollectionStatus()">
+                        <i class="bi bi-arrow-clockwise"></i>
+                    </button>
+                    <a href="{{ url_for('reports.index') }}" class="btn btn-outline-primary btn-sm">
+                        View Reports <i class="bi bi-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if collection_stats.last_collections %}
+                    <div class="table-responsive">
+                        <table class="table table-dark table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Device</th>
+                                    <th>Last Collection</th>
+                                    <th>Status</th>
+                                    <th>Time Ago</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for collection in collection_stats.last_collections %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ collection.device_name or 'Unknown' }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if collection.collection_time %}
+                                            {{ collection.collection_time|datetime }}
+                                        {% else %}
+                                            <span class="text-muted">Never</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if collection.success == 1 %}
+                                            <span class="status-badge status-online">
+                                                <i class="bi bi-check-circle me-1"></i>Success
+                                            </span>
+                                        {% elif collection.success == 0 %}
+                                            <span class="status-badge status-offline">
+                                                <i class="bi bi-x-circle me-1"></i>Failed
+                                            </span>
+                                        {% else %}
+                                            <span class="status-badge status-warning">
+                                                <i class="bi bi-question-circle me-1"></i>Unknown
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if collection.collection_time %}
+                                            {{ collection.collection_time|relative_time }}
+                                        {% else %}
+                                            <span class="text-muted">N/A</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a href="{{ url_for('devices.device_detail', device_name=collection.device_name) }}"
+                                               class="btn btn-outline-info" title="View Details">
+                                                <i class="bi bi-eye"></i>
+                                            </a>
+                                            <button class="btn btn-outline-primary"
+                                                    onclick="retryCollection('{{ collection.device_name }}')"
+                                                    title="Retry Collection">
+                                                <i class="bi bi-arrow-clockwise"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-database fs-1"></i>
+                        <p class="mt-2">No collection data available</p>
+                        <button class="btn btn-primary" onclick="initializeCollection()">
+                            Start Collection
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Chart configurations
+const chartColors = [
+    '#238636', '#1f6feb', '#d29922', '#da3633', '#8957e5',
+    '#fb8500', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444'
+];
+
+// Initialize charts
+let vendorChart, roleChart;
+
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCharts();
+});
+
+function initializeCharts() {
+    // Vendor distribution chart
+    const vendorCtx = document.getElementById('vendorChart');
+    if (vendorCtx) {
+        const vendorData = {{ device_stats.vendors|tojson|safe }};
+        if (vendorData && vendorData.length > 0) {
+            vendorChart = new Chart(vendorCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: vendorData.map(item => item.vendor),
+                    datasets: [{
+                        data: vendorData.map(item => item.count),
+                        backgroundColor: chartColors.slice(0, vendorData.length),
+                        borderColor: '#21262d',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#c9d1d9',
+                                padding: 15,
+                                usePointStyle: true
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            vendorCtx.parentElement.innerHTML = '<p class="text-center text-muted">No vendor data available</p>';
+        }
+    }
+
+    // Role distribution chart
+    const roleCtx = document.getElementById('roleChart');
+    if (roleCtx) {
+        const roleData = {{ device_stats.roles|tojson|safe }};
+        if (roleData && roleData.length > 0) {
+            roleChart = new Chart(roleCtx, {
+                type: 'bar',
+                data: {
+                    labels: roleData.map(item => item.device_role),
+                    datasets: [{
+                        label: 'Device Count',
+                        data: roleData.map(item => item.count),
+                        backgroundColor: chartColors[0],
+                        borderColor: chartColors[1],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#c9d1d9',
+                                padding: 20,
+                                usePointStyle: true
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                color: '#21262d'
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: '#8b949e'
+                            },
+                            grid: {
+                                color: '#21262d'
+                            }
+                        }
+                    }
+                }
+            });
+        } else {
+            roleCtx.parentElement.innerHTML = '<p class="text-center text-muted">No role data available</p>';
+        }
+    }
+}
+
+function refreshChart(chartName) {
+    showAlert('Chart refresh functionality will be implemented with real-time data updates.', 'info');
+}
+
+function refreshAlerts() {
+    showAlert('Alerts refreshed', 'success');
+}
+
+function refreshActivities() {
+    showAlert('Activities refreshed', 'success');
+}
+
+function refreshCollectionStatus() {
+    showAlert('Collection status refresh functionality will fetch latest data.', 'info');
+}
+
+function retryCollection(deviceName) {
+    showAlert(`Collection retry for ${deviceName} would be initiated here.`, 'info');
+}
+
+function initializeCollection() {
+    showAlert('Collection initialization would start here.', 'info');
+}
+
+// Helper function to show alerts
+function showAlert(message, type = 'info') {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+
+    const container = document.querySelector('.container-fluid');
+    if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+    }
+
+    // Auto-dismiss after 5 seconds
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}
