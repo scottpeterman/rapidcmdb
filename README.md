@@ -4,7 +4,7 @@
 
 *Rapid discovery. Reliable reconciliation. Transform weeks of manual asset auditing into hours of automated intelligence.*
 
-![RapidCMDB Dashboard](screenshots/rapidcmdb-dashboard.gif)
+![RapidCMDB Dashboard](https://raw.githubusercontent.com/scottpeterman/rapidcmdb/refs/heads/main/screenshots/slides1.gif)
 
 ## 🎯 The CMDB Reconciliation Problem
 
