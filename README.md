@@ -36,6 +36,7 @@ After:  RapidCMDB identified 847 devices across 23 sites in one weekend
 Result: Accurate asset valuation, accelerated integration, informed decisions
 ```
 
+![Dashboard](screenshots/rapidcmdb-dashboard.gif)
 
 
 ## 🚀 Core Capabilities
