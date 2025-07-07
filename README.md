@@ -1,397 +1,316 @@
-# RapidCMDB - Network Asset Discovery & CMDB Reconciliation
+# RapidCMDB - Network Discovery & CMDB Reconciliation Tool
 
-**Enterprise-grade network discovery and automated device correlation for CMDB reconciliation projects.**
+A network discovery and device correlation tool built with Flask, NAPALM, and SNMP for CMDB reconciliation projects. This solution provides automated network discovery, device data collection, and a web-based dashboard for managing network inventory data.
 
-*Rapid discovery. Reliable reconciliation. Transform weeks of manual asset auditing into hours of automated intelligence.*
+![RapidCMDB Dashboard](https://raw.githubusercontent.com/scottpeterman/rapidcmdb/refs/heads/main/screenshots/slides1.gif)
 
-![RapidCMDB Dashboard](screenshots/rapidcmdb-dashboard.gif)
-
-## 🎯 The CMDB Reconciliation Problem
-
-**Multiple CMDBs. Conflicting data. What do you actually have?**
-
-Enterprise IT teams face daily challenges:
-- 📊 **Multiple asset databases** with conflicting device counts and details
-- 🔍 **Manual audit processes** that take weeks and miss critical devices  
-- 📈 **M&A asset reconciliation** where acquired networks are completely unknown
-- ⚠️ **Compliance gaps** due to shadow IT and undocumented infrastructure
-- 💰 **Software licensing costs** based on inaccurate install base data
-- 🏢 **Legacy system cleanup** with incomplete or outdated documentation
-
-**RapidCMDB provides rapid "ground truth" discovery to reconcile your CMDBs in hours, not weeks.**
-
-## 💼 Real-World Impact
-
-### Enterprise IT Asset Audit
-```
-Before: Annual compliance audit required 3 weeks of manual device enumeration
-After:  2-hour RapidCMDB scan + 1 day reconciliation = audit-ready inventory
-Result: 95% time reduction, zero compliance findings, $200K cost avoidance
-```
-
-### M&A Due Diligence Success
-```
-Before: 6-month network integration delayed due to unknown infrastructure
-After:  RapidCMDB identified 847 devices across 23 sites in one weekend  
-Result: Accurate asset valuation, accelerated integration, informed decisions
-```
-
-![Dashboard](screenshots/rapidcmdb-dashboard.gif)
+## Screenshots
 
 
-## 🚀 Core Capabilities
+![Pipeline](https://raw.githubusercontent.com/scottpeterman/rapidcmdb/refs/heads/main/screenshots/scan_redacted.png)
 
-### ⚡ Rapid Asset Discovery
-- **Sub-hour enterprise scanning** across complex networks (10,000+ devices)
-- **Multi-protocol discovery** (SNMP v2c/v3, SSH, HTTP, CDP, LLDP)
-- **Intelligent concurrency** with automatic rate limiting
-- **Serial number harvesting** for precise device identification
-- **Zero network impact** discovery methods with read-only access
+## What RapidCMDB Does
 
-### 🔗 CMDB Reconciliation Engine
-- **Advanced data correlation** across multiple asset sources and formats
-- **Fuzzy matching algorithms** using serial numbers, MAC addresses, hostnames, IP addresses
-- **AI-powered confidence scoring** for automated vs. manual review workflows
-- **Duplicate detection** with intelligent merge/purge recommendations
-- **Comprehensive gap analysis** (devices in network vs. registered in CMDB)
-- **Orphaned record identification** for systematic CMDB cleanup
+RapidCMDB helps network administrators and IT teams:
+- **Discover network devices** using SNMP scanning across subnets
+- **Collect detailed device information** via NAPALM (facts, interfaces, LLDP neighbors, configurations)
+- **Compare discovered devices** against existing CMDB data to find discrepancies
+- **Visualize network topology** from LLDP neighbor data
+- **Generate reports** on device inventory and network status
 
-### 📊 Enterprise Asset Intelligence
-- **Vendor normalization** (handles "Cisco Systems" vs "Cisco" vs "CSCO")
-- **Model standardization** for consistent reporting across business units
-- **Intelligent device classification** (network infrastructure vs. end-user devices)
-- **Software discovery** for license optimization and compliance
-- **Compliance mapping** to regulatory frameworks (SOX, PCI-DSS, HIPAA)
-- **Risk assessment** based on device age, EOL status, and patch levels
+This tool is designed for **network discovery and basic CMDB reconciliation** - it's not a full CMDB replacement but helps identify what's actually on your network versus what's documented.
 
+## Key Features
 
-## 💡 Who RapidCMDB Is For
+### Network Discovery
+- SNMP-based scanning with v2c and v3 support
+- **High-performance scanning**: 48+ hosts/second discovery rates
+- Real-time progress tracking with detailed statistics
+- Concurrent scanning with configurable timeout settings (4+ second response times)
+- **Large network capability**: Successfully scans 65,000+ IP ranges
+- Automated device fingerprinting and vendor identification
+- **Impressive discovery rates**: 350+ responding devices from 25,000+ host scans
+- Multiple output formats (CSV, JSON database)
 
-### 🎯 Primary Users
+### Device Data Collection
+- NAPALM integration supporting multiple network vendors
+- Comprehensive data gathering including:
+  - Device facts and system information
+  - Interface configurations and status
+  - LLDP neighbor discovery for topology mapping
+  - ARP and MAC address tables
+  - Environmental data (CPU, memory, temperature)
+  - Full device configurations
 
-**IT Asset Managers**
-- Maintain accurate CMDB data across multiple enterprise systems
-- Prepare for compliance audits with complete confidence
-- Optimize software licensing through precise install base intelligence
-- Demonstrate ROI through automated discovery and reconciliation
+### Real-Time Pipeline Management
+- **Live scanning interface** with real-time progress updates
+- **Performance monitoring**: hosts/second rates, ETA calculations, response statistics
+- Interactive terminal output with detailed scan progress
+- **Concurrent processing**: configurable worker threads and timeout values
+- **Large-scale network discovery**: tested on 65,000+ IP ranges with 48+ hosts/sec rates
+- WebSocket-based real-time updates and job status tracking
+- Automated database import and processing
 
-**Network Consultants & System Integrators**
-- Rapid client network assessment and comprehensive documentation
-- M&A due diligence with detailed asset discovery and valuation
-- Infrastructure audit services with professional reporting
-- Pre-migration discovery for digital transformation projects
+### Network Topology Visualization
+- Interactive topology diagrams generated from LLDP data with interface normalization
+- Multiple layout options (tree, balloon) and filtering capabilities  
+- Export to JSON, Mermaid, or Draw.io format
+- Site-based filtering and network-only mode for infrastructure focus
+- Bidirectional consistency checking for accurate topology representation
+- Enhanced interface normalization supporting Cisco IOS, NX-OS, and Arista platforms
 
-**IT Auditors & Compliance Teams**
-- Verify asset register accuracy against discoverable ground truth
-- Compliance gap analysis with complete audit trail documentation
-- Risk assessment preparation with current state analysis
-- Regulatory reporting with traceable and verifiable data sources
-
-### 🏢 Organization Types
-
-**Enterprise IT Departments**
-- Multi-site organizations with distributed network infrastructure
-- Companies undergoing digital transformation initiatives
-- Organizations with acquisition-driven growth strategies
-- Businesses facing increasing regulatory compliance requirements
-
-**Professional Services Firms**
-- IT audit and assessment consulting practices
-- Network security consulting and penetration testing
-- Infrastructure modernization and cloud migration specialists
-- M&A advisory services requiring technical due diligence
-
-## 🆚 Competitive Positioning
-
-| Category | Examples | Strengths | Limitations | Primary Use Case |
-|----------|----------|-----------|-------------|------------------|
-| **Enterprise CMDB** | NetBox, ServiceNow CMDB | Full asset lifecycle management | Heavy deployment, slow discovery | Ongoing asset management |
-| **Commercial Discovery** | Lansweeper, Device42 | Detailed OS-level scanning | Expensive licensing, complex setup | Comprehensive IT inventory |
-| **Network Monitoring** | SolarWinds, PRTG | Real-time performance monitoring | Not designed for asset discovery | Operational monitoring |
-| **Security Scanners** | Nessus, Qualys VMDR | Vulnerability assessment focus | Limited asset metadata | Security compliance scanning |
-| **🎯 RapidCMDB** | This solution | **Rapid CMDB reconciliation** | Not a full CMDB replacement | **Asset audits & reconciliation** |
-
-### Key Differentiators
-- ✅ **Lightweight & Portable** - Single executable deployment, no complex infrastructure
-- ✅ **CMDB-Focused Design** - Purpose-built for asset reconciliation workflows
-- ✅ **Consultant-Ready** - Perfect for assessments, audits, and rapid deployments
-- ✅ **Multi-Vendor Excellence** - Handles diverse enterprise network environments
-- ✅ **Cost-Effective** - Open source foundation with no per-device licensing costs
-
-## 🚀 Quick Start Guide
-
-### Phase 1: Rapid Network Discovery (30 minutes)
-```bash
-# Deploy RapidCMDB scanner to network jump host
-./rapidcmdb-scanner -target 10.0.0.0/8 \
-  -communities "public,private,enterprise" \
-  -snmp-version 3 \
-  -enable-database -output discovered_devices.json
-
-# Results: Complete device inventory with vendor/model/serial data
-```
-
-### Phase 2: Asset Correlation (1 hour)
-```bash
-# Collect comprehensive device data using NAPALM
-rapidcmdb-collector discovered_devices.json --workers 20
-
-# Import discoveries to analysis database
-rapidcmdb import --source ./captures --analyze
-```
-
-### Phase 3: CMDB Reconciliation (2 hours)
-1. **Export current CMDB** data to CSV/Excel format
-2. **Import to RapidCMDB** via web dashboard for correlation
-3. **Run automated correlation** with confidence-scored matching
-4. **Review high-confidence matches** for automated processing
-5. **Manually validate** medium-confidence matches for accuracy
-6. **Generate reconciliation report** with detailed recommendations
-7. **Export clean dataset** back to target CMDB system
-
-### **Total Time Investment: Half-day assessment vs. weeks of manual effort**
-
-## 📁 RapidCMDB Architecture
+## Project Structure
 
 ```
 rapidcmdb/
-├── app.py                      # Web dashboard for reconciliation workflows
-├── rapidcmdb/                  # Core RapidCMDB modules
-│   ├── scanner/               # Network discovery engine
-│   │   ├── snmp_discovery.py  # Multi-version SNMP scanning
-│   │   ├── fingerprinting.py  # Device identification and classification
-│   │   └── concurrent_scan.py # High-performance parallel scanning
-│   ├── reconciliation/        # CMDB reconciliation engine
-│   │   ├── correlator.py     # Advanced device matching algorithms
-│   │   ├── confidence.py     # AI-powered match confidence scoring
-│   │   ├── deduplicator.py   # Intelligent duplicate detection
-│   │   └── gap_analyzer.py   # Comprehensive gap analysis
-│   ├── integrations/          # Enterprise CMDB connectors
-│   │   ├── servicenow.py     # ServiceNow CMDB API integration
-│   │   ├── lansweeper.py     # Lansweeper database connector
-│   │   ├── device42.py       # Device42 API integration
-│   │   └── excel_export.py   # Customizable Excel/CSV export
-│   └── analytics/             # Asset intelligence and reporting
-│       ├── vendor_analysis.py # Vendor normalization and analysis
-│       ├── compliance.py     # Regulatory compliance mapping
-│       └── risk_assessment.py # EOL and security risk analysis
+├── app.py                      # Main Flask application
+├── db_manager.py               # Database management utilities
+├── npcollector1.py             # NAPALM data collector
+├── gosnmpcli.exe              # SNMP scanner executable
+├── rapidcmdb.db               # SQLite database
+├── collector_config.yaml      # Collection configuration
 ├── 
-├── web/                       # Web interface for reconciliation
-│   ├── blueprints/
-│   │   ├── dashboard.py      # Reconciliation overview and KPIs
-│   │   ├── discovery.py      # Network discovery management
-│   │   ├── reconcile.py      # Interactive reconciliation workflows
-│   │   ├── reports.py        # Gap analysis and executive reporting
-│   │   └── integrations.py   # CMDB import/export management
-│   └── templates/reconciliation/
-│       ├── correlation.html   # Side-by-side device comparison interface
-│       ├── confidence.html   # Match confidence review and validation
-│       ├── gaps.html         # Missing/orphaned device management
-│       └── export.html       # Clean data export and scheduling
+├── blueprints/                 # Flask application modules
+│   ├── dashboard.py           # Main dashboard
+│   ├── devices.py             # Device management
+│   ├── topology.py            # Topology visualization
+│   ├── config.py              # Configuration management
+│   ├── reports.py             # Basic reporting
+│   └── pipeline.py            # Discovery pipeline
 ├── 
-├── config/                    # Configuration and templates
-│   ├── vendor_fingerprints.yaml # Device identification patterns
-│   ├── cmdb_templates/        # Standard CMDB import/export formats
-│   └── compliance_frameworks/ # Regulatory compliance mappings
-└── 
-└── docs/                      # Comprehensive documentation
-    ├── deployment_guide.md   # Enterprise deployment best practices
-    ├── reconciliation_playbook.md # Step-by-step reconciliation workflows
-    ├── integration_examples/ # CMDB integration code samples
-    └── api_reference.md      # REST API documentation
+├── templates/                  # Web interface templates
+├── captures/                   # Device data storage
+├── config/                     # Configuration files
+├── logs/                       # Application logs
+└── scans/                      # Scan results
 ```
 
-## 🔧 Enterprise Installation
+## Installation
 
-### System Requirements
-- **Operating System**: Windows 10+, Linux (RHEL 7+, Ubuntu 18+), macOS 10.15+
-- **Python Runtime**: Python 3.8+ (included in installer packages)
-- **Memory**: 4GB RAM minimum (16GB recommended for large networks)
-- **Storage**: 10GB available space (scales with network size)
-- **Network Access**: SNMP (UDP 161), SSH (TCP 22), HTTP/HTTPS (TCP 80/443)
+### Prerequisites
+- Python 3.8+
+- SQLite3
 
-### Rapid Deployment
+### Setup
 ```bash
-# Option 1: Single executable (Windows/Linux)
-# Download rapidcmdb-enterprise.exe (no dependencies)
-./rapidcmdb-enterprise.exe --web-interface
+# Clone the repository
+git clone https://github.com/scottpeterman/rapidcmdb.git
+cd rapidcmdb
 
-# Option 2: Python installation (all platforms)
-pip install rapidcmdb
-rapidcmdb --init-config --start-web
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-# Option 3: Docker deployment (containerized)
-docker run -p 5000:5000 -v ./data:/app/data rapidcmdb/enterprise
+# Install dependencies
+pip install flask flask-sqlalchemy flask-socketio
+pip install napalm netmiko pyyaml requests eventlet networkx
 
-# Option 4: Enterprise package (with support)
-# Contact support for custom deployment packages
+# Initialize database
+python db_manager.py --create-schema
 ```
 
-**Ready to reconcile**: http://localhost:5000
+## Usage
 
-## 📊 Enterprise Reconciliation Workflows
-
-### Workflow 1: ServiceNow CMDB Audit & Cleanup
+### 1. Start the Application
 ```bash
-# 1. Export current ServiceNow CI data
-# Web Interface: Reconciliation → Import → ServiceNow → Upload CI Export
-
-# 2. Execute comprehensive network discovery
-# Discovery → New Scan → Enterprise Networks → Execute
-
-# 3. Run automated correlation analysis
-# Reconciliation → Correlate Data → Review Confidence Scores
-
-# 4. Validate and approve matches
-# Review → High Confidence (auto-approve) → Medium Confidence (manual review)
-
-# 5. Generate comprehensive audit report
-# Reports → CMDB Audit → Export Executive Summary + Detailed Findings
+python app.py
 ```
+Access the web interface at http://localhost:5000
 
-### Workflow 2: M&A Network Asset Assessment
+### 2. Network Discovery Process
+
+#### Basic Workflow:
+1. **Configure scan parameters** (target networks, SNMP communities)
+2. **Run network discovery** to find devices via SNMP
+3. **Collect device data** using NAPALM for detailed information
+4. **Review results** in the web dashboard
+5. **Export data** for CMDB import or further analysis
+
+#### Command Line Usage:
 ```bash
-# 1. Rapid discovery of acquired company infrastructure
-rapidcmdb scan --target acquired-company-networks.json --ma-mode
+# Discover devices
+./gosnmpcli.exe -mode scan -target 192.168.1.0/24 -enable-db -database devices.json
 
-# 2. Comprehensive asset classification and valuation
-rapidcmdb analyze --enhanced-inventory --valuation-mode
+# Collect detailed data
+python npcollector1.py devices.json --config collector_config.yaml
 
-# 3. Integration planning and risk assessment
-# Dashboard → M&A Assessment → Asset Valuation + Integration Complexity Analysis
+# Import to database
+python db_manager.py --import-dir ./captures
 ```
 
-### Workflow 3: Enterprise License Optimization
+### 3. CMDB Reconciliation
+
+The tool helps with reconciliation by:
+- Providing accurate "ground truth" of network devices
+- Comparing discovered devices against CMDB exports (CSV/Excel)
+- Identifying missing, extra, or incorrectly documented devices
+- Generating reports showing discrepancies
+
+**Note**: Manual comparison and reconciliation is currently required - automated correlation is planned for future versions.
+
+## Configuration
+
+### SNMP Scanner Options
 ```bash
-# 1. Focus discovery on software-defined infrastructure
-# Target Cisco, VMware, Microsoft, Oracle environments specifically
+# Basic scan
+./gosnmpcli.exe -mode scan -target 192.168.1.0/24
 
-# 2. License requirement analysis and optimization
-# Analytics → License Analysis → By Vendor/Product Family/Contract
-
-# 3. Generate procurement recommendations
-# Reports → License Optimization → Cost Savings Analysis + Recommendations
+# SNMPv3 scan
+./gosnmpcli.exe -mode scan -target 10.0.0.0/16 \
+  -snmp-version 3 -username admin \
+  -auth-protocol SHA -auth-key "your-key" \
+  -priv-protocol AES128 -priv-key "your-key"
 ```
 
-### Workflow 4: Regulatory Compliance Preparation
+### NAPALM Collector Configuration
+Edit `collector_config.yaml`:
+```yaml
+timeout: 60
+max_workers: 10
+enhanced_inventory: true
+
+credentials:
+  - name: primary
+    username: admin
+    password: your-password
+    priority: 1
+
+collection_methods:
+  get_facts: true
+  get_interfaces: true
+  get_lldp_neighbors: true
+  get_config: true
+```
+
+## Supported Devices
+
+RapidCMDB works with devices supported by NAPALM and provides enhanced recognition for:
+
+**Fully Supported (NAPALM + Enhanced Recognition):**
+- Cisco IOS/IOS-XE/NX-OS devices with interface normalization
+- Arista EOS switches with full topology support  
+- Juniper JunOS devices
+- Fortinet FortiGate firewalls
+
+**Discovery and Classification (SNMP):**
+- Palo Alto Networks firewalls and Panorama
+- Silver Peak SD-WAN appliances  
+- HP/HPE ProCurve switches
+- Dell networking equipment
+- APC UPS systems
+- Various printers (Lexmark, Xerox, Brother)
+- Security cameras and IoT devices
+
+**Interface Normalization:** 
+- Cisco: GigabitEthernet, TenGigabitEthernet, etc. → Gi, Te, etc.
+- Arista: Ethernet → Et
+- Platform-aware normalization for consistent topology diagrams
+
+SNMP discovery works with most network devices that support SNMP v2c/v3.
+
+## Performance Characteristics
+
+Based on real-world testing:
+- **Discovery Rate**: 48+ hosts per second scanning capability
+- **Network Scale**: Successfully processes 65,000+ IP address ranges  
+- **Response Handling**: Manages 350+ responding devices from large scans
+- **Concurrent Processing**: 80+ concurrent SNMP requests with 4-second timeouts
+- **Real-time Updates**: Live progress tracking with sub-second refresh rates
+- **Database Performance**: Efficient SQLite storage with JSON export capabilities
+
+*Performance varies based on network conditions, device response times, and hardware specifications.*
+
+## Use Cases
+
+## Use Cases
+
+This tool is suitable for:
+- **Large-scale network discovery** with 48+ hosts/second scanning rates
+- **Enterprise network documentation** and topology mapping with professional diagrams
+- **CMDB cleanup** initiatives requiring device discovery and classification
+- **Configuration analysis** with full-text search and change tracking
+- **Network audits** with enhanced device type recognition and reporting
+- **Migration planning** where you need current state assessment and topology export
+- **Multi-vendor environments** with normalized interface representation
+- **Medium to large enterprise** networks (tested on 65,000+ IP ranges)
+- **Professional network documentation** with Draw.io integration
+- **Real-time network assessment** with live progress monitoring
+
+## Current Limitations
+
+- Manual CMDB correlation (automated matching planned for future)
+- Limited to read-only device access
+- SQLite database (not suitable for very large deployments)
+- No user authentication (local use only)
+- Interface normalization limited to Cisco and Arista platforms
+- Draw.io export requires local installation for advanced features
+
+## API Endpoints
+
+### REST API
+- `GET /api/metrics` - Dashboard statistics  
+- `GET /api/alerts` - System alerts
+- `GET /topology/api/topology/data` - Network topology data with interface normalization
+- `GET /topology/api/topology/mermaid` - Mermaid diagram code
+- `GET /topology/api/sites` - Available sites for filtering
+- `GET /config/api/config/<id>` - Configuration content
+- `GET /reports/api/analyze/<filename>` - Scan file analysis
+- `POST /topology/api/topology/export/drawio` - Export topology to Draw.io format
+- `GET /health` - Application health check
+
+### Advanced Features
+- **Configuration Search API** with multiple search modes
+- **Topology Export** in JSON, Mermaid, and Draw.io formats  
+- **Device Classification** with confidence scoring
+- **Interface Normalization** for consistent topology representation
+
+WebSocket events available for real-time pipeline monitoring.
+
+## Contributing
+
+This is an open-source project. Contributions welcome:
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request
+
+## Troubleshooting
+
+### Common Issues:
+- **SNMP timeouts**: Verify community strings and device accessibility
+- **NAPALM connection failures**: Check SSH credentials and device compatibility  
+- **Missing topology**: Ensure LLDP is enabled on network devices
+- **Interface normalization issues**: Check vendor detection and platform mapping
+- **Configuration search errors**: Verify database schema and file permissions
+- **Performance issues**: Adjust worker threads and timeout values
+
+### Debug Mode:
 ```bash
-# 1. Comprehensive asset discovery with compliance focus
-rapidcmdb scan --compliance-mode --frameworks sox,pci,hipaa
-
-# 2. Gap analysis against regulatory requirements
-# Compliance → Framework Analysis → SOX/PCI-DSS/HIPAA Requirements
-
-# 3. Generate compliance documentation
-# Reports → Compliance → Audit-Ready Documentation + Risk Assessment
+export FLASK_DEBUG=1
+python app.py
 ```
 
-## 🎯 Proven ROI Metrics
+## License
 
-### Potential Time Savings
-- **Traditional manual audit**: 40 hours analyst time + 2 weeks cross-team coordination
-- **RapidCMDB automated process**: 4 hours setup + overnight automated discovery
-- **Documented ROI**: 90% time reduction, freeing staff for strategic initiatives
+MIT License - see LICENSE file for details.
 
-### Possible Cost Avoidance
-- **Cisco licensing optimization**: Accurate device inventory saves $200K in unnecessary SmartNet contracts
-- **VMware right-sizing**: Precise vSphere licensing reduces annual costs by 25-30%
-- **Compliance penalty avoidance**: Complete asset visibility prevents $500K+ regulatory penalties
+## Version History
 
-### Process Improvement Metrics
-- **CMDB data accuracy**: Improvement from 60% to 95%+ verified device records
-- **Change management**: Automated discovery identifies 100% of unauthorized network changes
-- **Risk reduction**: Complete infrastructure visibility eliminates compliance and security blind spots
+- **v1.1** - Added topology visualization and improved web interface
+- **v1.0** - Initial release with basic discovery and collection
 
-### Executive-Level Business Impact
-- **Audit preparation time**: Reduced from 6 weeks to 3 days
-- **M&A integration timeline**: Accelerated by 4-6 months through accurate asset assessment
-- **IT budget accuracy**: Improved by 40% through precise license and maintenance planning
+## Roadmap
 
-## 🔐 Enterprise Security & Compliance
-
-### Security-First Architecture
-- **Read-only discovery protocols** with zero impact on production networks
-- **Encrypted credential storage** with automatic rotation capabilities
-- **Comprehensive audit logging** for all discovery activities and data access
-- **Data classification handling** with PII/sensitive information protection
-- **Zero persistent data retention** option for highly secure environments
-
-### Compliance Framework Support  
-- **SOX (Sarbanes-Oxley)**: IT asset controls and change management documentation
-- **PCI-DSS**: Network segmentation validation and asset inventory requirements
-- **HIPAA**: Infrastructure documentation for covered entity compliance
-- **ISO 27001**: Asset management and information security controls
-- **NIST Cybersecurity Framework**: Asset identification and inventory management
-
-### Enterprise Scalability
-- **Large network optimization**: Tested and validated on 50,000+ device environments
-- **Distributed scanning architecture**: Multi-site deployment with central aggregation
-- **Intelligent rate limiting**: Automatic adjustment to prevent network congestion
-- **Resume and recovery**: Automated restart capability for interrupted large-scale scans
-- **Incremental discovery**: Delta updates for ongoing CMDB synchronization
-
-## 📈 Integration Architecture Potential
-
-
-### Enterprise Data Pipeline
-- **ETL framework**: Extract, Transform, Load pipelines for data warehouse integration
-- **Message queue support**: Apache Kafka, RabbitMQ for enterprise event streaming
-- **Database connectors**: Direct integration with Oracle, SQL Server, PostgreSQL
-- **SIEM integration**: Security event correlation with Splunk, QRadar, ArcSight
-
-### Custom Integration Service Possibiilities
-- **SDK availability**: Python, JavaScript, PowerShell libraries for custom development
-- **Professional services**: Custom connector development for proprietary CMDBs
-- **Enterprise support**: Dedicated technical account management and priority support
-- **Training programs**: Administrator and developer certification courses
-
-## 📞 Enterprise Support & Services
-
-### Self-Service Resources
-- **📖 Comprehensive documentation** with step-by-step reconciliation playbooks
-- **🎥 Professional video training** library covering all workflows and integrations
-- **💬 Enterprise community portal** with expert-moderated technical discussions
-- **🔧 Advanced troubleshooting** guides for complex enterprise environments
-- **📋 Best practices library** with proven deployment and optimization strategies
-
-### Professional Services Portfolio
-- **🚀 Rapid deployment consulting** (2-5 day enterprise engagements)
-- **🎯 Custom reconciliation workflows** for specific CMDB environments and requirements
-- **📊 Executive reporting templates** designed for C-level and board presentations
-- **🔗 Custom integration development** for proprietary and legacy systems
-- **🏫 Enterprise training programs** with certification for administrators and analysts
-
-
-
-## 🏁 Start Your CMDB Reconciliation Journey
-
-**Ready to transform your CMDB reconciliation process?**
-
-### **Option 1: Immediate Evaluation**
-1. **Download RapidCMDB** (5 minutes installation)
-2. **Scan a test subnet** (30 minutes for comprehensive results)  
-3. **Import sample CMDB data** (15 minutes using provided templates)
-4. **Experience automated correlation** (immediate intelligent matching)
-
-### **Option 2: Professional Assessment**
-- **Book a discovery call** with our CMDB reconciliation specialists
-- **Schedule a custom demo** using your actual network environment
-- **Request a pilot program** with dedicated implementation support
-
-### **Option 3: Enterprise Deployment**
-- **Contact enterprise sales** for volume licensing and support options
-- **Schedule on-site consultation** for complex reconciliation requirements
-- **Discuss custom integration** needs with our professional services team
+Planned features:
+- [ ] Automated CMDB correlation and matching algorithms
+- [ ] User authentication and multi-user support
+- [ ] Enhanced interface normalization for additional vendors
+- [ ] Advanced configuration templating and compliance checking
+- [ ] API expansion for external integrations
+- [ ] Real-time configuration change monitoring
+- [ ] Advanced topology analytics and path analysis
+- [ ] PostgreSQL database support for larger deployments
+- [ ] Automated scheduling and monitoring capabilities
 
 ---
 
-
-*Transform weeks of manual CMDB reconciliation into hours of automated intelligence with RapidCMDB.*
-
----
-
-### About RapidCMDB
-
-RapidCMDB is developed by network infrastructure professionals who understand the daily challenges of maintaining accurate CMDBs in complex enterprise environments. Born from real-world reconciliation projects, RapidCMDB delivers the automation and intelligence that IT teams need to maintain accurate asset inventories without the complexity of traditional discovery platforms.
-
-**© 2024 RapidCMDB. All rights reserved.**
+**RapidCMDB is a practical tool for network discovery and basic CMDB reconciliation.** While it's not an enterprise-scale CMDB platform, it provides valuable functionality for network administrators who need to understand what's actually deployed in their networks.
