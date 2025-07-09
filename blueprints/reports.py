@@ -352,16 +352,53 @@ class DeviceAnalyzer:
 
     def is_napalm_supported(self, vendor: str, device_type: str) -> bool:
         """Check if device is supported by NAPALM"""
+
+        # Debug logging
+        print(f"DEBUG: Checking NAPALM support for vendor='{vendor}', type='{device_type}'")
+
+        # Normalize inputs
+        vendor = str(vendor).lower().strip()
+        device_type = str(device_type).lower().strip()
+
+        # NAPALM supported vendors (updated list)
         napalm_vendors = [
-            'cisco', 'arista', 'juniper', 'fortinet', 'palo_alto',
-            'dell', 'extreme', 'vyos', 'hp'
+            'cisco', 'arista', 'juniper', 'fortinet',
+            'palo_alto', 'palo_alto_sdwan',  # Add your custom vendor names
+            'dell', 'extreme', 'vyos', 'hp', 'hpe',
+            'eos',  # Arista EOS
+            'nxos',  # Cisco NX-OS
+            'ios'  # Cisco IOS
         ]
 
+        # NAPALM supported device types (broader list)
         napalm_device_types = [
-            'router', 'switch', 'firewall', 'load_balancer'
+            'router', 'switch', 'firewall', 'load_balancer',
+            'sdwan', 'wireless_controller'  # Some wireless controllers are supported
         ]
 
-        return (vendor in napalm_vendors and device_type in napalm_device_types)
+        # Check vendor support
+        vendor_supported = any(v in vendor for v in napalm_vendors)
+
+        # Check device type support
+        type_supported = any(dt in device_type for dt in napalm_device_types)
+
+        # Special cases
+        if vendor == 'palo_alto' and device_type == 'firewall':
+            print(f"DEBUG: Palo Alto firewall - NAPALM supported")
+            return True
+
+        if vendor == 'cisco' and device_type in ['router', 'switch']:
+            print(f"DEBUG: Cisco {device_type} - NAPALM supported")
+            return True
+
+        if vendor == 'arista' and device_type == 'switch':
+            print(f"DEBUG: Arista switch - NAPALM supported")
+            return True
+
+        result = vendor_supported and type_supported
+        print(f"DEBUG: vendor_supported={vendor_supported}, type_supported={type_supported}, result={result}")
+
+        return result
 
     def analyze_scan_file(self, scan_file_path: str) -> Dict:
         """Analyze scan file and return device signatures"""

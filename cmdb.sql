@@ -30,10 +30,8 @@ CREATE TABLE devices (
     
     -- Constraints
     CONSTRAINT check_vendor_not_empty CHECK (TRIM(vendor) != ''),
-    CONSTRAINT check_serial_not_empty CHECK (TRIM(serial_number) != ''),
     CONSTRAINT check_device_name_not_empty CHECK (TRIM(device_name) != ''),
     CONSTRAINT check_site_code_format CHECK (site_code GLOB '[A-Z][A-Z][A-Z]*'),
-    CONSTRAINT check_device_role_valid CHECK (device_role IN ('core', 'access', 'distribution', 'firewall', 'router', 'switch', 'wireless', 'load_balancer', 'unknown')),
     CONSTRAINT check_uptime_positive CHECK (uptime IS NULL OR uptime >= 0)
 );
 

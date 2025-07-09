@@ -6,15 +6,15 @@ log_level: 'INFO'  # DEBUG, INFO, WARNING, ERROR
 # Credential sets - will be tried in priority order
 credentials:
   - name: 'primary'
-    username: 'svc_admin'
-    password: 'adpw'
+    username: 'admin'
+    password: 'adminpw'
     enable_password: ''  # For devices requiring enable mode
     priority: 1
 
   - name: 'backup'
-    username: 'netadmin'
-    password: 'your_backup_password'
-    enable_password: 'enable_password'
+    username: 'backupadmin'
+    password: 'bwpw'
+    enable_password: 'pw'
     priority: 2
 
   - name: 'readonly'

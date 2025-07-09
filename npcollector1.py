@@ -90,7 +90,7 @@ class DeviceCollector:
             'arista': 'eos',
             'paloalto': 'panos',
             'hp': 'procurve',
-            'aruba': 'arubaos',
+            'aruba': 'arubaoss',
             'fortinet': 'fortios',
             'juniper': 'junos'
         }
@@ -141,7 +141,7 @@ class DeviceCollector:
             },
             'vendor_overrides': {
                 'hp_procurve': 'procurve',
-                'hp_aruba_cx': 'arubaos',
+                'hp_aruba_cx': 'arubaoss',
                 'cisco_ios': 'ios',
                 'cisco_nxos': 'nxos',
                 'cisco_asa': 'asa'
@@ -205,7 +205,7 @@ class DeviceCollector:
             if 'procurve' in sys_descr or 'j' in device.get('sys_name', '').lower():
                 return 'procurve'
             elif 'arubaos' in sys_descr or 'cx' in sys_descr:
-                return 'arubaos'
+                return 'arubaoss'
 
         # Default mapping
         return self.driver_mapping.get(vendor)
@@ -395,6 +395,10 @@ class DeviceCollector:
                 if napalm_driver == 'eos':
                     device_params['optional_args']['transport'] = 'ssh'
                     logging.info(f"Using SSH transport for Arista device {device_ip}")
+
+                if napalm_driver == 'arubaoss':
+                    device_params['optional_args']['transport'] = 'ssh'
+                    logging.info(f"Using SSH transport for Aruba device {device_ip}")
 
                 # Apply driver-specific options from config
                 driver_options = self.config.get('driver_options', {})

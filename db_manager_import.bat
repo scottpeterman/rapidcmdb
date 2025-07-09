@@ -1,0 +1,1 @@
+python db_manager.py --import-dir captures --check-duplicates  --topology --sites

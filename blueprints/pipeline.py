@@ -109,14 +109,43 @@ def register_socketio_events():
             # Get the scan file - this should be the JSON database file
             scan_file = data.get('scan_file', 'scanner_usmd_devices.json')  # Default to JSON
 
-            # Try to find the actual database file
-            if scan_file.endswith('.csv'):
+            logging.info(f"Collection request for scan file: {scan_file}")
+
+            # Get the directory paths
+            app_dir = os.path.dirname(os.path.abspath(__file__))
+            parent_dir = os.path.dirname(app_dir)  # Go up one level from blueprints
+            scans_dir = os.path.join(parent_dir, 'scans')
+
+            # Resolve the actual file path
+            resolved_scan_file = None
+
+            if os.path.isabs(scan_file):
+                # It's already absolute, use as-is
+                resolved_scan_file = scan_file
+            elif os.path.sep in scan_file:
+                # It has path separators, treat as relative path from parent_dir
+                resolved_scan_file = os.path.join(parent_dir, scan_file)
+            else:
+                # Just a filename, look in scans directory first
+                scan_file_in_scans = os.path.join(scans_dir, scan_file)
+                if os.path.exists(scan_file_in_scans):
+                    resolved_scan_file = scan_file_in_scans
+                    logging.info(f"Found scan file in scans directory: {resolved_scan_file}")
+                else:
+                    # Fallback to parent directory for backward compatibility
+                    fallback_path = os.path.join(parent_dir, scan_file)
+                    if os.path.exists(fallback_path):
+                        resolved_scan_file = fallback_path
+                        logging.info(f"Found scan file in parent directory: {resolved_scan_file}")
+
+            # Try to find the actual database file if we got a CSV
+            if resolved_scan_file and resolved_scan_file.endswith('.csv'):
                 # Look for corresponding JSON database file
                 possible_json_files = [
-                    scan_file.replace('.csv', '.json'),
-                    f"scanner_{scan_file.replace('.csv', '_devices.json')}",
-                    'scanner_usmd_devices.json',
-                    './scanner_usmd_devices.json'
+                    resolved_scan_file.replace('.csv', '.json'),
+                    f"scanner_{resolved_scan_file.replace('.csv', '_devices.json')}",
+                    os.path.join(scans_dir, 'scanner_usmd_devices.json'),
+                    os.path.join(parent_dir, 'scanner_usmd_devices.json')
                 ]
 
                 json_file_found = None
@@ -131,25 +160,34 @@ def register_socketio_events():
                     })
                     return
 
-                scan_file = json_file_found
+                resolved_scan_file = json_file_found
 
-            # Verify the file exists
-            if not os.path.exists(scan_file):
+            # Final check that we found a file
+            if not resolved_scan_file or not os.path.exists(resolved_scan_file):
+                # Provide helpful error message showing where we looked
+                searched_paths = []
+                if not os.path.isabs(scan_file) and os.path.sep not in scan_file:
+                    searched_paths = [
+                        os.path.join(scans_dir, scan_file),
+                        os.path.join(parent_dir, scan_file)
+                    ]
+
                 emit('collection_error', {
-                    'message': f'Scan file not found: {scan_file}'
+                    'message': f'Scan file not found: {scan_file}. Searched paths: {searched_paths}'
                 })
                 return
 
-            # Update the data with the correct file
-            data['scan_file'] = scan_file
+            # Update the data with the resolved file path
+            data['scan_file'] = resolved_scan_file
 
             emit('collection_output', {
-                'message': f'Using JSON database file: {scan_file}',
+                'message': f'Using JSON database file: {resolved_scan_file}',
                 'type': 'info'
             })
 
             # Build collector command
             command = build_collector_command(data)
+            logging.info(f"Command to run: {command}")
 
             emit('collection_output', {
                 'message': f'Starting NAPALM collector: {" ".join(command)}',
@@ -300,9 +338,17 @@ def build_scanner_command(data):
         command.extend(['-snmp-version', '3'])
         command.extend(['-username', data.get('username', '')])
         command.extend(['-auth-protocol', data.get('authProtocol', 'SHA')])
-        command.extend(['-auth-key', data.get('authKey', '')])
+
+        # ✅ FIX: Wrap auth-key and priv-key values to handle special characters
+        auth_key = data.get('authKey', '')
+        if auth_key:
+            command.extend(['-auth-key', f"'{auth_key}'"])  # Wrap in quotes
+
         command.extend(['-priv-protocol', data.get('privProtocol', 'AES128')])
-        command.extend(['-priv-key', data.get('privKey', '')])
+
+        priv_key = data.get('privKey', '')
+        if priv_key:
+            command.extend(['-priv-key', f"'{priv_key}'"])  # Wrap in quotes
 
     # Fingerprinting and output
     command.extend(['-fingerprint-type', data.get('fingerprintType', 'full')])
@@ -325,6 +371,7 @@ def build_collector_command(data):
     # Get the directory where app.py is located
     app_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(app_dir)  # Go up one level from blueprints
+    scans_dir = os.path.join(parent_dir, 'scans')
 
     # Use the current Python interpreter
     python_exe = sys.executable
@@ -355,24 +402,63 @@ def build_collector_command(data):
     # Get the scan file (should already be JSON at this point)
     scan_file = data['scan_file']
 
-    # Convert to absolute path if it's relative
-    if not os.path.isabs(scan_file):
-        scan_file = os.path.join(parent_dir, scan_file)
+    logging.info(f"Original scan_file from data: {scan_file}")
 
-    # Verify the file exists
-    if not os.path.exists(scan_file):
-        raise FileNotFoundError(f"Scan file not found: {scan_file}")
+    # Build the full path to the scan file
+    # First, check if it's already an absolute path
+    if os.path.isabs(scan_file):
+        # It's already absolute, use as-is
+        final_scan_file = scan_file
+    elif os.path.sep in scan_file:
+        # It has path separators, treat as relative path from parent_dir
+        final_scan_file = os.path.join(parent_dir, scan_file)
+    else:
+        # Just a filename, look in scans directory first
+        scan_file_in_scans = os.path.join(scans_dir, scan_file)
+        if os.path.exists(scan_file_in_scans):
+            final_scan_file = scan_file_in_scans
+            logging.info(f"Found scan file in scans directory: {final_scan_file}")
+        else:
+            # Fallback to parent directory for backward compatibility
+            fallback_path = os.path.join(parent_dir, scan_file)
+            if os.path.exists(fallback_path):
+                final_scan_file = fallback_path
+                logging.info(f"Found scan file in parent directory: {final_scan_file}")
+            else:
+                # Last resort - try current working directory
+                cwd_path = os.path.join(os.getcwd(), scan_file)
+                if os.path.exists(cwd_path):
+                    final_scan_file = cwd_path
+                    logging.info(f"Found scan file in current directory: {final_scan_file}")
+                else:
+                    # File not found anywhere, raise error with helpful message
+                    searched_paths = [
+                        scan_file_in_scans,
+                        fallback_path,
+                        cwd_path
+                    ]
+                    raise FileNotFoundError(
+                        f"Scan file not found: {scan_file}. Searched in: {searched_paths}"
+                    )
+
+    # Convert to absolute path
+    final_scan_file = os.path.abspath(final_scan_file)
+
+    # Final verification that the file exists
+    if not os.path.exists(final_scan_file):
+        raise FileNotFoundError(f"Scan file not found: {final_scan_file}")
+
+    logging.info(f"Using scan file: {final_scan_file}")
 
     # Build simple command: python npcollector1.py <json_file>
-    command = [python_exe, collector_script, scan_file]
-
+    command = [python_exe, collector_script, final_scan_file]
+    logging.info(f"Command to run: {command}")
     # Add workers parameter if specified
     workers = data.get('max_workers', 10)
     if workers and workers != 10:  # Only add if different from default
         command.extend(['--workers', str(workers)])
 
     return command
-
 
 def create_collector_config(data):
     """Create temporary collector configuration file"""
@@ -422,18 +508,23 @@ def start_scanner_process(command, session_id):
             app_dir = os.path.dirname(os.path.abspath(__file__))
             parent_dir = os.path.dirname(app_dir)  # Go up one level from blueprints
 
-            logging.info(f"Starting scanner with command: {' '.join(command)}")
+            # Convert command list to properly escaped string
+            import shlex
+            command_str = ' '.join(shlex.quote(arg) for arg in command)
+            command_str = command_str.replace("'","")
+            logging.info(f"Starting scanner with command: {command_str}")
             logging.info(f"Working directory: {parent_dir}")
 
             process = subprocess.Popen(
-                command,
+                command_str,  # Use the escaped string instead of list
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
                 universal_newlines=True,
                 bufsize=1,
-                cwd=parent_dir,  # Set working directory to where app.py is
-                encoding='utf-8',  # Explicitly set UTF-8 encoding
-                errors='replace'  # Replace invalid characters instead of failing
+                cwd=parent_dir,
+                encoding='utf-8',
+                errors='replace',
+                shell=True  # Enable shell mode
             )
 
             # Store process for management
@@ -666,11 +757,11 @@ def start_pipeline_execution(data, session_id):
                 'concurrency': 80,
                 'communities': 'public,write',
                 'snmpVersion': '3',
-                'username': 'svc_admin',
+                'username': '',
                 'authProtocol': 'SHA',
-                'authKey': 'svc_pw',
+                'authKey': '',
                 'privProtocol': 'AES128',
-                'privKey': 'svc_pw',
+                'privKey': '',
                 'fingerprintType': 'full',
                 'enableDb': True,
                 'database': './pipeline_scanner_db',
@@ -983,15 +1074,23 @@ def get_available_scan_files():
     app_dir = os.path.dirname(os.path.abspath(__file__))
     parent_dir = os.path.dirname(app_dir)  # Go up one level from blueprints
 
-    logging.info(f"Looking for scan files in directory: {parent_dir}")
+    # Look in the scans subdirectory
+    scans_dir = os.path.join(parent_dir, 'scans')
+
+    logging.info(f"Looking for scan files in directory: {scans_dir}")
+
+    # Create scans directory if it doesn't exist
+    if not os.path.exists(scans_dir):
+        os.makedirs(scans_dir)
+        logging.info(f"Created scans directory: {scans_dir}")
 
     # Look for JSON files that appear to be scanner database files
     search_patterns = [
-        os.path.join(parent_dir, '*scanner*devices*.json'),
-        os.path.join(parent_dir, 'scanner_*.json'),
-        os.path.join(parent_dir, '*_devices.json'),
-        os.path.join(parent_dir, 'scanned_*.json'),  # Added for scanned_frs_devices.json
-        os.path.join(parent_dir, '*.json')  # All JSON files as fallback
+        os.path.join(scans_dir, '*scanner*devices*.json'),
+        os.path.join(scans_dir, 'scanner_*.json'),
+        os.path.join(scans_dir, '*_devices.json'),
+        os.path.join(scans_dir, 'scanned_*.json'),
+        os.path.join(scans_dir, '*.json')  # All JSON files as fallback
     ]
 
     found_files = []
@@ -1045,7 +1144,6 @@ def get_available_scan_files():
     found_files.sort(key=lambda x: x.split('|')[2] if len(x.split('|')) > 2 else '', reverse=True)
 
     return found_files
-
 
 def format_file_size(size_bytes):
     """Format file size in human readable format"""

@@ -35,6 +35,180 @@ def get_db_connection():
     return conn
 
 
+# Add this import at the top of your topology.py file, along with other imports
+from .json_topology_exporter import JSONTopologyExporter
+
+
+# Add this new API endpoint function to your topology.py file
+
+@topology_bp.route('/api/topology/export/json', methods=['GET', 'POST'])
+def api_export_json_topology():
+    """Export topology to standard JSON format used by mapping applications"""
+    try:
+        # Handle both GET and POST requests
+        if request.method == 'POST':
+            config = request.get_json() or {}
+        else:
+            config = {}
+
+        # Get parameters from either query string or POST body
+        sites = request.args.getlist('site') or config.get('sites', [])
+        roles = request.args.getlist('role') or config.get('roles', [])
+        include_patterns = request.args.getlist('include') or config.get('include_patterns', [])
+        exclude_patterns = request.args.getlist('exclude') or config.get('exclude_patterns', [])
+        network_only = (request.args.get('network_only', '').lower() == 'true' or
+                        config.get('network_only', False))
+
+        # Export options
+        include_metadata = (request.args.get('include_metadata', 'true').lower() == 'true' or
+                            config.get('include_metadata', True))
+        pretty_print = (request.args.get('pretty_print', 'true').lower() == 'true' or
+                        config.get('pretty_print', True))
+        download_file = (request.args.get('download_file', 'false').lower() == 'true' or
+                         config.get('download_file', False))
+
+        logger.info(f"JSON export request: sites={sites}, network_only={network_only}, "
+                    f"include_metadata={include_metadata}, download_file={download_file}")
+
+        # Build topology map using existing function
+        topology_map = build_topology_map(
+            include_patterns=include_patterns,
+            exclude_patterns=exclude_patterns,
+            sites=sites,
+            roles=roles,
+            network_only=network_only
+        )
+
+        if not topology_map:
+            return jsonify({
+                'success': False,
+                'error': 'No topology data found with current filters',
+                'device_count': 0
+            }), 400
+
+        # Create exporter and convert topology
+        exporter = JSONTopologyExporter(
+            include_metadata=include_metadata,
+            pretty_print=pretty_print
+        )
+
+        if download_file:
+            # Export to file and return as download
+            timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+            filename = f"network-topology-{timestamp}.json"
+            output_path = Path(filename)
+
+            # Convert topology and remove metadata before saving to file
+            converted_topology = exporter.convert_topology_map(topology_map)
+
+            if include_metadata:
+                final_data = exporter.add_export_metadata(converted_topology)
+            else:
+                final_data = converted_topology
+
+            # ✅ OPTION C: Remove metadata regardless of include_metadata setting
+            final_data.pop('_export_metadata', None)
+
+            # Write clean data to file
+            with open(output_path, 'w', encoding='utf-8') as f:
+                if pretty_print:
+                    json.dump(final_data, f, indent=2, ensure_ascii=False, sort_keys=True)
+                else:
+                    json.dump(final_data, f, ensure_ascii=False, separators=(',', ':'))
+
+            logger.info(f"Successfully exported {len(converted_topology)} devices to JSON file: {filename}")
+
+            # Return file as download
+            return send_file(
+                str(output_path.absolute()),
+                as_attachment=True,
+                download_name=filename,
+                mimetype='application/json'
+            )
+        else:
+            # Return JSON response
+            converted_topology = exporter.convert_topology_map(topology_map)
+
+            if include_metadata:
+                final_data = exporter.add_export_metadata(converted_topology)
+            else:
+                final_data = converted_topology
+
+            # ✅ OPTION C: Remove metadata regardless of include_metadata setting
+            final_data.pop('_export_metadata', None)
+
+            # Validate the exported data
+            validation_results = exporter.validate_exported_data(final_data)
+
+            return jsonify({
+                'success': True,
+                'topology': final_data,  # This will NOT contain _export_metadata
+                'export_info': {
+                    'format': 'standard_json_topology',
+                    'device_count': len(converted_topology),
+                    'timestamp': datetime.now().isoformat(),
+                    'filters_applied': {
+                        'sites': sites,
+                        'network_only': network_only,
+                        'include_patterns': include_patterns,
+                        'exclude_patterns': exclude_patterns
+                    },
+                    'export_options': {
+                        'include_metadata': include_metadata,
+                        'pretty_print': pretty_print
+                    }
+                },
+                'validation': validation_results
+            })
+
+    except Exception as e:
+        logger.error(f"JSON export error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': 'JSON export failed'
+        }), 500
+
+@topology_bp.route('/api/topology/export/json/sample')
+def api_json_export_sample():
+    """Provide a sample of the JSON export format for documentation"""
+    try:
+        from .json_topology_exporter import create_sample_topology
+
+        sample_topology = create_sample_topology()
+        exporter = JSONTopologyExporter(include_metadata=True, pretty_print=True)
+
+        converted_topology = exporter.convert_topology_map(sample_topology)
+        final_data = exporter.add_export_metadata(converted_topology)
+        final_data = converted_topology
+        return jsonify({
+            'success': True,
+            'sample_topology': final_data,
+            'description': 'Sample topology in standard JSON format',
+            'usage': {
+                'export_endpoint': '/api/topology/export/json',
+                'parameters': {
+                    'sites': 'List of site codes to include',
+                    'network_only': 'Boolean - include only network devices',
+                    'include_metadata': 'Boolean - include export metadata',
+                    'pretty_print': 'Boolean - format JSON for readability',
+                    'download_file': 'Boolean - return as file download'
+                },
+                'examples': {
+                    'json_response': '/api/topology/export/json?sites=FRS&network_only=true',
+                    'file_download': '/api/topology/export/json?sites=FRS&download_file=true',
+                    'minimal': '/api/topology/export/json?include_metadata=false&pretty_print=false'
+                }
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Error generating sample JSON export: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 def execute_query(query, params=None):
     """Execute query and return results with error handling"""
     conn = get_db_connection()

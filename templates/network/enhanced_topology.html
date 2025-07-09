@@ -262,6 +262,9 @@
                                         <li><a class="dropdown-item" href="#" id="export-png">
                                             <i class="bi bi-file-image"></i> Export PNG
                                         </a></li>
+                                        <li><a class="dropdown-item" href="#" id="export-json">
+                                            <i class="bi bi-filetype-json"></i> Export JSON Topology
+                                        </a></li>
                                         <li><a class="dropdown-item" href="#" id="export-drawio">
                                             <i class="bi bi-diagram-3"></i> Export Draw.io
                                         </a></li>
@@ -488,8 +491,7 @@ function enforceNetworkOnlyMode() {
 document.addEventListener('DOMContentLoaded', enforceNetworkOnlyMode);
 </script>
 <script>
-// Enhanced Topology Viewer with Jinja Integration
-// Enhanced Topology Viewer with Jinja Integration and Draw.io Export
+// Enhanced Topology Viewer with Jinja Integration and Complete Export Functionality
 class TopologyViewer {
     constructor() {
         this.selectedNode = null;
@@ -530,8 +532,11 @@ class TopologyViewer {
     }
 
     initializeEventListeners() {
-        // Legend controls - Updated to work with card-based list
-        document.getElementById('node-search-input').addEventListener('input', (e) => this.filterNodes(e.target.value));
+        // Node search input
+        const nodeSearchInput = document.getElementById('node-search-input');
+        if (nodeSearchInput) {
+            nodeSearchInput.addEventListener('input', (e) => this.filterNodes(e.target.value));
+        }
 
         // Node list interactions
         document.querySelectorAll('.node-item').forEach(item => {
@@ -546,20 +551,53 @@ class TopologyViewer {
         });
 
         // Zoom controls
-        document.getElementById('zoom-in').addEventListener('click', () => this.zoomIn());
-        document.getElementById('zoom-out').addEventListener('click', () => this.zoomOut());
-        document.getElementById('reset-zoom').addEventListener('click', () => this.resetZoom());
+        const zoomInBtn = document.getElementById('zoom-in');
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', () => this.zoomIn());
+        }
+
+        const zoomOutBtn = document.getElementById('zoom-out');
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', () => this.zoomOut());
+        }
+
+        const resetZoomBtn = document.getElementById('reset-zoom');
+        if (resetZoomBtn) {
+            resetZoomBtn.addEventListener('click', () => this.resetZoom());
+        }
 
         // Fullscreen toggle
-        document.getElementById('fullscreen-toggle').addEventListener('click', () => this.toggleFullscreen());
+        const fullscreenBtn = document.getElementById('fullscreen-toggle');
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+        }
 
         // Export functions
-        document.getElementById('export-svg').addEventListener('click', () => this.exportSVG());
-        if (document.getElementById('export-png')) {
-            document.getElementById('export-png').addEventListener('click', () => this.exportPNG());
+        const exportSvgBtn = document.getElementById('export-svg');
+        if (exportSvgBtn) {
+            exportSvgBtn.addEventListener('click', () => this.exportSVG());
         }
-        // Draw.io export event listener
-        document.getElementById('export-drawio').addEventListener('click', () => this.exportDrawio());
+
+        const exportPngBtn = document.getElementById('export-png');
+        if (exportPngBtn) {
+            exportPngBtn.addEventListener('click', () => this.exportPNG());
+        }
+
+        const exportDrawioBtn = document.getElementById('export-drawio');
+        if (exportDrawioBtn) {
+            exportDrawioBtn.addEventListener('click', () => this.exportDrawio());
+        }
+
+        // JSON export functionality
+        const exportJsonBtn = document.getElementById('export-json');
+        if (exportJsonBtn) {
+            exportJsonBtn.addEventListener('click', () => this.exportJSON());
+        }
+
+        const previewJsonBtn = document.getElementById('preview-json');
+        if (previewJsonBtn) {
+            previewJsonBtn.addEventListener('click', () => this.previewJSON());
+        }
 
         // Keyboard shortcuts
         document.addEventListener('keydown', (e) => {
@@ -574,24 +612,26 @@ class TopologyViewer {
         });
 
         // Mouse wheel zoom
-        document.getElementById('topology-container').addEventListener('wheel', (e) => {
-            e.preventDefault();
-            if (e.deltaY < 0) {
-                this.zoomIn();
-            } else {
-                this.zoomOut();
-            }
-        });
+        const topologyContainer = document.getElementById('topology-container');
+        if (topologyContainer) {
+            topologyContainer.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                if (e.deltaY < 0) {
+                    this.zoomIn();
+                } else {
+                    this.zoomOut();
+                }
+            });
+        }
     }
 
     renderTopology() {
         const diagramContainer = document.getElementById('mermaid-diagram');
 
-        // Check if no sites are selected (assuming this means show all)
+        // Check if no sites are selected
         const urlParams = new URLSearchParams(window.location.search);
         const selectedSites = urlParams.getAll('sites');
 
-        // If no sites selected, show a message instead of rendering everything
         if (selectedSites.length === 0) {
             diagramContainer.innerHTML = `
                 <div class="text-center text-muted p-5">
@@ -650,8 +690,11 @@ class TopologyViewer {
                 this.renderTopology();
 
                 // Update status
-                document.getElementById('diagram-status').className = 'badge bg-success';
-                document.getElementById('diagram-status').textContent = 'Loaded from API';
+                const statusElement = document.getElementById('diagram-status');
+                if (statusElement) {
+                    statusElement.className = 'badge bg-success';
+                    statusElement.textContent = 'Loaded from API';
+                }
             } else {
                 throw new Error(data.error || 'Failed to load topology data');
             }
@@ -677,7 +720,7 @@ class TopologyViewer {
 
     setupPanZoom() {
         const diagramContainer = document.getElementById('mermaid-diagram');
-        const svgElement = diagramContainer.querySelector('svg');
+        const svgElement = diagramContainer?.querySelector('svg');
         if (!svgElement) return;
 
         svgElement.style.cursor = 'grab';
@@ -717,7 +760,6 @@ class TopologyViewer {
                 this.panOffset.y += deltaY / this.zoomLevel;
 
                 this.applyTransform();
-
                 this.lastMousePos = { x: e.clientX, y: e.clientY };
             }
         });
@@ -725,7 +767,9 @@ class TopologyViewer {
         document.addEventListener('mouseup', () => {
             if (this.isDragging) {
                 this.isDragging = false;
-                svgElement.style.cursor = 'grab';
+                if (svgElement) {
+                    svgElement.style.cursor = 'grab';
+                }
             }
         });
     }
@@ -749,7 +793,6 @@ class TopologyViewer {
                 const textElement = node.querySelector('text, .label text, .nodeLabel');
                 if (textElement) {
                     const nodeText = textElement.textContent || '';
-                    // Extract device name from node text
                     const deviceName = nodeText.split('\n')[0].trim();
                     const nodeId = deviceName.replace(/[^a-zA-Z0-9_]/g, '_');
 
@@ -770,6 +813,8 @@ class TopologyViewer {
         const deviceName = textElement ? textElement.textContent.split('\n')[0] : 'Unknown Device';
         const popup = document.getElementById('device-info-popup');
         const content = document.getElementById('popup-content');
+
+        if (!popup || !content) return;
 
         // Try to find device data from the node list
         const nodeListItem = document.querySelector(`[data-node-name="${deviceName}"]`);
@@ -794,14 +839,16 @@ class TopologyViewer {
         }
 
         content.innerHTML = deviceInfo;
-
         popup.style.left = event.pageX + 10 + 'px';
         popup.style.top = event.pageY + 10 + 'px';
         popup.style.display = 'block';
     }
 
     hideDeviceInfo() {
-        document.getElementById('device-info-popup').style.display = 'none';
+        const popup = document.getElementById('device-info-popup');
+        if (popup) {
+            popup.style.display = 'none';
+        }
     }
 
     selectNode(nodeName, nodeId) {
@@ -845,11 +892,9 @@ class TopologyViewer {
             const textElement = node.querySelector('text, .label text, .nodeLabel');
             if (textElement) {
                 const nodeText = textElement.textContent || '';
-                // Check if this node matches our target device name
                 if (nodeText.includes(nodeName)) {
                     node.classList.add(className);
 
-                    // Also directly modify the SVG elements for better visibility
                     const rect = node.querySelector('rect, circle, polygon');
                     if (rect) {
                         if (className === 'selected') {
@@ -864,7 +909,6 @@ class TopologyViewer {
                         }
                     }
 
-                    // Scroll the node into view if it's selected
                     if (className === 'selected') {
                         node.scrollIntoView({
                             behavior: 'smooth',
@@ -886,7 +930,6 @@ class TopologyViewer {
                 if (nodeText.includes(nodeName)) {
                     node.classList.remove(className);
 
-                    // Reset SVG element styles if this was a highlight (not selection)
                     if (className === 'highlighted') {
                         const rect = node.querySelector('rect, circle, polygon');
                         if (rect) {
@@ -905,7 +948,6 @@ class TopologyViewer {
         document.querySelectorAll(`#mermaid-diagram .node.${className}`).forEach(node => {
             node.classList.remove(className);
 
-            // Reset all SVG styling when clearing selections
             if (className === 'selected') {
                 const rect = node.querySelector('rect, circle, polygon');
                 if (rect) {
@@ -941,7 +983,6 @@ class TopologyViewer {
         let visibleCount = 0;
 
         nodeItems.forEach(item => {
-            const nodeName = item.getAttribute('data-node-name');
             const nodeText = item.textContent.toLowerCase();
 
             if (term === '' || nodeText.includes(term)) {
@@ -952,12 +993,63 @@ class TopologyViewer {
             }
         });
 
-        document.getElementById('visible-nodes-count').textContent = visibleCount;
+        const visibleCountElement = document.getElementById('visible-nodes-count');
+        if (visibleCountElement) {
+            visibleCountElement.textContent = visibleCount;
+        }
+    }
+
+    // Zoom and pan controls
+    zoomIn() {
+        this.zoomLevel = Math.min(this.zoomLevel * 1.2, 3);
+        this.applyTransform();
+    }
+
+    zoomOut() {
+        this.zoomLevel = Math.max(this.zoomLevel / 1.2, 0.3);
+        this.applyTransform();
+    }
+
+    resetZoom() {
+        this.zoomLevel = 1;
+        this.panOffset = { x: 0, y: 0 };
+        this.applyTransform();
+    }
+
+    applyTransform() {
+        const svgElement = document.querySelector('#mermaid-diagram svg');
+        const transformGroup = svgElement?.querySelector('g.transform-group');
+
+        if (transformGroup) {
+            transformGroup.style.transform = `translate(${this.panOffset.x}px, ${this.panOffset.y}px) scale(${this.zoomLevel})`;
+            transformGroup.style.transformOrigin = '0 0';
+        }
+    }
+
+    panWithKeys(key) {
+        const panStep = 50;
+        switch (key) {
+            case 'ArrowUp':
+                this.panOffset.y += panStep / this.zoomLevel;
+                break;
+            case 'ArrowDown':
+                this.panOffset.y -= panStep / this.zoomLevel;
+                break;
+            case 'ArrowLeft':
+                this.panOffset.x += panStep / this.zoomLevel;
+                break;
+            case 'ArrowRight':
+                this.panOffset.x -= panStep / this.zoomLevel;
+                break;
+        }
+        this.applyTransform();
     }
 
     toggleFullscreen() {
         const container = document.getElementById('topology-container');
         const button = document.getElementById('fullscreen-toggle');
+
+        if (!container || !button) return;
 
         if (!this.isFullscreen) {
             container.style.position = 'fixed';
@@ -981,51 +1073,7 @@ class TopologyViewer {
         }
     }
 
-    zoomIn() {
-        this.zoomLevel = Math.min(this.zoomLevel * 1.2, 3);
-        this.applyTransform();
-    }
-
-    zoomOut() {
-        this.zoomLevel = Math.max(this.zoomLevel / 1.2, 0.3);
-        this.applyTransform();
-    }
-
-    resetZoom() {
-        this.zoomLevel = 1;
-        this.panOffset = { x: 0, y: 0 };
-        this.applyTransform();
-    }
-
-    applyTransform() {
-        const svgElement = document.querySelector('#mermaid-diagram svg');
-        const transformGroup = svgElement?.querySelector('g.transform-group');
-
-        if (transformGroup) {
-            transformGroup.style.transform = `translate(${this.panOffset.x}px, ${this.panOffset.y}px) scale(${this.zoomLevel})`;
-            transformGroup.style.transformOrigin = '0 0';
-        }
-    }
-
-    panWithKeys(key) {
-        const panStep = 50;
-        switch (key) {
-            case 'ArrowUp':
-                this.panOffset.y += panStep / this.zoomLevel;
-                break;
-            case 'ArrowDown':
-                this.panOffset.y -= panStep / this.zoomLevel;
-                break;
-            case 'ArrowLeft':
-                this.panOffset.x += panStep / this.zoomLevel;
-                break;
-            case 'ArrowRight':
-                this.panOffset.x -= panStep / this.zoomLevel;
-                break;
-        }
-        this.applyTransform();
-    }
-
+    // Export functions
     exportSVG() {
         const svgElement = document.querySelector('#mermaid-diagram svg');
         if (!svgElement) {
@@ -1044,7 +1092,6 @@ class TopologyViewer {
             return;
         }
 
-        // Create canvas and convert SVG to PNG
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         const svgData = new XMLSerializer().serializeToString(svgElement);
@@ -1070,23 +1117,22 @@ class TopologyViewer {
         img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
     }
 
-    // NEW METHOD - Draw.io export function
     exportDrawio() {
-        // Get current filter values from the form
         const exportConfig = {
-            layout: this.getLayoutForDrawio(), // Convert Mermaid layout to Draw.io layout
-            network_only: document.getElementById('network-only').checked,
-            sites: Array.from(document.getElementById('site-filter').selectedOptions).map(o => o.value),
+            layout: this.getLayoutForDrawio(),
+            network_only: document.getElementById('network-only')?.checked || false,
+            sites: Array.from(document.getElementById('site-filter')?.selectedOptions || []).map(o => o.value),
             use_icons: true
         };
 
         console.log('Exporting Draw.io with config:', exportConfig);
 
-        // Show loading indicator
         const button = document.getElementById('export-drawio');
-        const originalText = button.innerHTML;
-        button.innerHTML = '<i class="bi bi-hourglass-split"></i> Exporting...';
-        button.disabled = true;
+        const originalText = button?.innerHTML;
+        if (button) {
+            button.innerHTML = '<i class="bi bi-hourglass-split"></i> Exporting...';
+            button.disabled = true;
+        }
 
         fetch('/topology/api/topology/export/drawio', {
             method: 'POST',
@@ -1102,7 +1148,6 @@ class TopologyViewer {
             return response.blob();
         })
         .then(blob => {
-            // Create download
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -1112,7 +1157,6 @@ class TopologyViewer {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            // Show success message
             this.showNotification('Draw.io export completed successfully!', 'success');
         })
         .catch(error => {
@@ -1120,30 +1164,164 @@ class TopologyViewer {
             this.showNotification('Export failed: ' + error.message, 'error');
         })
         .finally(() => {
-            // Reset button
-            button.innerHTML = originalText;
-            button.disabled = false;
+            if (button) {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
         });
     }
 
-    // NEW METHOD - Convert Mermaid layout to Draw.io layout
-    getLayoutForDrawio() {
-        const mermaidLayout = document.getElementById('layout-select').value;
+    exportJSON() {
+        const exportConfig = {
+            sites: Array.from(document.getElementById('site-filter')?.selectedOptions || []).map(o => o.value),
+            network_only: document.getElementById('network-only')?.checked || false,
+            include_metadata: false,
+            pretty_print: true,
+            download_file: true
+        };
 
-        // Map Mermaid layouts to Draw.io layouts
+        console.log('Exporting JSON topology with config:', exportConfig);
+
+        const button = document.getElementById('export-json');
+        const originalText = button?.innerHTML;
+        if (button) {
+            button.innerHTML = '<i class="bi bi-hourglass-split"></i> Exporting...';
+            button.disabled = true;
+        }
+
+        fetch('/topology/api/topology/export/json', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(exportConfig)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || `HTTP error! status: ${response.status}`);
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+
+            const timestamp = new Date().toISOString().split('T')[0];
+            const siteFilter = exportConfig.sites.length > 0 ? exportConfig.sites.join('-') : 'all-sites';
+            a.download = `network-topology-${siteFilter}-${timestamp}.json`;
+
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            this.showNotification('JSON topology export completed successfully!', 'success');
+        })
+        .catch(error => {
+            console.error('Export error:', error);
+            this.showNotification('Export failed: ' + error.message, 'error');
+        })
+        .finally(() => {
+            if (button) {
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        });
+    }
+
+    previewJSON() {
+        const exportConfig = {
+            sites: Array.from(document.getElementById('site-filter')?.selectedOptions || []).map(o => o.value),
+            network_only: document.getElementById('network-only')?.checked || false,
+            include_metadata: false,
+            pretty_print: true,
+            download_file: false
+        };
+
+        fetch('/topology/api/topology/export/json', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(exportConfig)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const jsonWindow = window.open('', '_blank');
+                jsonWindow.document.write(`
+                    <html>
+                    <head>
+                        <title>JSON Topology Preview</title>
+                        <style>
+                            body {
+                                font-family: monospace;
+                                margin: 20px;
+                                background: #1a1a1a;
+                                color: #fff;
+                            }
+                            pre {
+                                background: #2d3436;
+                                padding: 20px;
+                                border-radius: 8px;
+                                overflow: auto;
+                                white-space: pre-wrap;
+                                word-wrap: break-word;
+                            }
+                            .info {
+                                background: #74b9ff;
+                                color: white;
+                                padding: 10px;
+                                border-radius: 4px;
+                                margin-bottom: 20px;
+                            }
+                            .copy-btn {
+                                background: #00b894;
+                                color: white;
+                                padding: 8px 16px;
+                                border: none;
+                                border-radius: 4px;
+                                cursor: pointer;
+                                margin-bottom: 10px;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="info">
+                            <h3>JSON Topology Preview</h3>
+                            <p>Devices: ${data.export_info.device_count} | Timestamp: ${data.export_info.timestamp}</p>
+                            <p>Filters: Sites=${data.export_info.filters_applied.sites.join(', ') || 'All'}, Network Only=${data.export_info.filters_applied.network_only}</p>
+                            <button class="copy-btn" onclick="navigator.clipboard.writeText(document.querySelector('pre').textContent)">Copy JSON</button>
+                        </div>
+                        <pre>${JSON.stringify(data.topology, null, 2)}</pre>
+                    </body>
+                    </html>
+                `);
+            } else {
+                this.showNotification('Failed to generate JSON preview: ' + data.error, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Preview error:', error);
+            this.showNotification('Preview failed: ' + error.message, 'error');
+        });
+    }
+
+    // Helper methods
+    getLayoutForDrawio() {
+        const layoutSelect = document.getElementById('layout-select');
+        const mermaidLayout = layoutSelect?.value || 'TD';
+
         const layoutMap = {
-            'TD': 'tree',    // Top-Down -> Tree
-            'LR': 'tree',    // Left-Right -> Tree
-            'RL': 'tree',    // Right-Left -> Tree
-            'BT': 'tree'     // Bottom-Top -> Tree
+            'TD': 'tree',
+            'LR': 'tree',
+            'RL': 'tree',
+            'BT': 'tree'
         };
 
         return layoutMap[mermaidLayout] || 'tree';
     }
 
-    // NEW METHOD - Show notification messages
     showNotification(message, type = 'info') {
-        // Create a simple notification
         const notification = document.createElement('div');
         notification.className = `alert alert-${type === 'error' ? 'danger' : 'success'} alert-dismissible fade show position-fixed`;
         notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
@@ -1154,7 +1332,6 @@ class TopologyViewer {
 
         document.body.appendChild(notification);
 
-        // Auto-remove after 5 seconds
         setTimeout(() => {
             if (notification.parentNode) {
                 notification.parentNode.removeChild(notification);
@@ -1165,311 +1342,15 @@ class TopologyViewer {
     downloadFile(content, filename, contentType) {
         const a = document.createElement('a');
         const file = new Blob([content], { type: contentType });
-
         a.href = URL.createObjectURL(file);
         a.download = filename;
         a.click();
-
         URL.revokeObjectURL(a.href);
     }
 
-    // Optional method if you want the "Show All Sites Anyway" button to work
     forceRenderAll() {
         console.log('Force rendering all sites...');
         this.loadTopologyFromAPI();
-    }
-
-highlightNodeInDiagram(nodeName, className) {
-    const svgNodes = document.querySelectorAll('#mermaid-diagram .node');
-    svgNodes.forEach(node => {
-        const textElement = node.querySelector('text, .label text, .nodeLabel');
-        if (textElement) {
-            const nodeText = textElement.textContent || '';
-            // Check if this node matches our target device name
-            if (nodeText.includes(nodeName)) {
-                node.classList.add(className);
-
-                // Also directly modify the SVG elements for better visibility
-                const rect = node.querySelector('rect, circle, polygon');
-                if (rect) {
-                    if (className === 'selected') {
-                        rect.style.fill = '#4ade80';
-                        rect.style.stroke = '#22c55e';
-                        rect.style.strokeWidth = '3px';
-                        rect.style.filter = 'brightness(1.5)';
-                    } else if (className === 'highlighted') {
-                        rect.style.fill = 'rgba(74, 222, 128, 0.3)';
-                        rect.style.stroke = '#4ade80';
-                        rect.style.strokeWidth = '2px';
-                    }
-                }
-
-                // Scroll the node into view if it's selected
-                if (className === 'selected') {
-                    node.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'center'
-                    });
-                }
-            }
-        }
-    });
-}
-
-unhighlightNodeInDiagram(nodeName, className) {
-    const svgNodes = document.querySelectorAll('#mermaid-diagram .node');
-    svgNodes.forEach(node => {
-        const textElement = node.querySelector('text, .label text, .nodeLabel');
-        if (textElement) {
-            const nodeText = textElement.textContent || '';
-            if (nodeText.includes(nodeName)) {
-                node.classList.remove(className);
-
-                // Reset SVG element styles if this was a highlight (not selection)
-                if (className === 'highlighted') {
-                    const rect = node.querySelector('rect, circle, polygon');
-                    if (rect) {
-                        rect.style.fill = '';
-                        rect.style.stroke = '';
-                        rect.style.strokeWidth = '';
-                        rect.style.filter = '';
-                    }
-                }
-            }
-        }
-    });
-}
-
-clearDiagramHighlights(className) {
-    document.querySelectorAll(`#mermaid-diagram .node.${className}`).forEach(node => {
-        node.classList.remove(className);
-
-        // Reset all SVG styling when clearing selections
-        if (className === 'selected') {
-            const rect = node.querySelector('rect, circle, polygon');
-            if (rect) {
-                rect.style.fill = '';
-                rect.style.stroke = '';
-                rect.style.strokeWidth = '';
-                rect.style.filter = '';
-            }
-        }
-    });
-}
-    scrollToNode(nodeName) {
-        const svgNodes = document.querySelectorAll('#mermaid-diagram .node');
-        svgNodes.forEach(node => {
-            const textElement = node.querySelector('text, .label text, .nodeLabel');
-            if (textElement) {
-                const nodeText = textElement.textContent || '';
-                if (nodeText.includes(nodeName)) {
-                    node.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'center',
-                        inline: 'center'
-                    });
-                }
-            }
-        });
-    }
-
-    filterNodes(searchTerm) {
-        const term = searchTerm.toLowerCase().trim();
-        const nodeItems = document.querySelectorAll('.node-item');
-        let visibleCount = 0;
-
-        nodeItems.forEach(item => {
-            const nodeName = item.getAttribute('data-node-name');
-            const nodeText = item.textContent.toLowerCase();
-
-            if (term === '' || nodeText.includes(term)) {
-                item.style.display = 'flex';
-                visibleCount++;
-            } else {
-                item.style.display = 'none';
-            }
-        });
-
-        document.getElementById('visible-nodes-count').textContent = visibleCount;
-    }
-
-    // Remove the toggleLegend method since we no longer have a toggle-able legend panel
-
-    toggleFullscreen() {
-        const container = document.getElementById('topology-container');
-        const button = document.getElementById('fullscreen-toggle');
-
-        if (!this.isFullscreen) {
-            container.style.position = 'fixed';
-            container.style.top = '0';
-            container.style.left = '0';
-            container.style.width = '100vw';
-            container.style.height = '100vh';
-            container.style.zIndex = '9999';
-            container.style.background = '#1a1a1a';
-            button.innerHTML = '<i class="bi bi-fullscreen-exit"></i> Exit Fullscreen';
-            this.isFullscreen = true;
-        } else {
-            container.style.position = 'relative';
-            container.style.top = 'auto';
-            container.style.left = 'auto';
-            container.style.width = 'auto';
-            container.style.height = 'auto';
-            container.style.zIndex = 'auto';
-            button.innerHTML = '<i class="bi bi-fullscreen"></i> Fullscreen';
-            this.isFullscreen = false;
-        }
-    }
-
-    zoomIn() {
-        this.zoomLevel = Math.min(this.zoomLevel * 1.2, 3);
-        this.applyTransform();
-    }
-
-    zoomOut() {
-        this.zoomLevel = Math.max(this.zoomLevel / 1.2, 0.3);
-        this.applyTransform();
-    }
-
-    resetZoom() {
-        this.zoomLevel = 1;
-        this.panOffset = { x: 0, y: 0 };
-        this.applyTransform();
-    }
-
-    applyTransform() {
-        const svgElement = document.querySelector('#mermaid-diagram svg');
-        const transformGroup = svgElement?.querySelector('g.transform-group');
-
-        if (transformGroup) {
-            transformGroup.style.transform = `translate(${this.panOffset.x}px, ${this.panOffset.y}px) scale(${this.zoomLevel})`;
-            transformGroup.style.transformOrigin = '0 0';
-        }
-    }
-
-    panWithKeys(key) {
-        const panStep = 50;
-        switch (key) {
-            case 'ArrowUp':
-                this.panOffset.y += panStep / this.zoomLevel;
-                break;
-            case 'ArrowDown':
-                this.panOffset.y -= panStep / this.zoomLevel;
-                break;
-            case 'ArrowLeft':
-                this.panOffset.x += panStep / this.zoomLevel;
-                break;
-            case 'ArrowRight':
-                this.panOffset.x -= panStep / this.zoomLevel;
-                break;
-        }
-        this.applyTransform();
-    }
-
-    exportSVG() {
-        const svgElement = document.querySelector('#mermaid-diagram svg');
-        if (!svgElement) {
-            alert('No diagram to export');
-            return;
-        }
-
-        const svgData = new XMLSerializer().serializeToString(svgElement);
-        this.downloadFile(svgData, 'topology-diagram.svg', 'image/svg+xml');
-    }
-
-exportDrawio() {
-    const exportConfig = {
-        layout: document.getElementById('layout-select').value,
-        network_only: document.getElementById('network-only').checked,
-        sites: Array.from(document.getElementById('site-filter').selectedOptions).map(o => o.value),
-        use_icons: true
-    };
-
-    // Show loading indicator
-    const button = document.getElementById('export-drawio');
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="bi bi-hourglass"></i> Exporting...';
-    button.disabled = true;
-
-    fetch('/topology/api/topology/export/drawio', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify(exportConfig)
-    })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.blob();
-    })
-    .then(blob => {
-        // Create download
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `rapidcmdb-topology-${new Date().toISOString().split('T')[0]}.drawio`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-
-        // Show success message
-        this.showNotification('Draw.io export completed successfully!', 'success');
-    })
-    .catch(error => {
-        console.error('Export error:', error);
-        this.showNotification('Export failed: ' + error.message, 'error');
-    })
-    .finally(() => {
-        // Reset button
-        button.innerHTML = originalText;
-        button.disabled = false;
-    });
-}
-
-    exportPNG() {
-        const svgElement = document.querySelector('#mermaid-diagram svg');
-        if (!svgElement) {
-            alert('No diagram to export');
-            return;
-        }
-
-        // Create canvas and convert SVG to PNG
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        const svgData = new XMLSerializer().serializeToString(svgElement);
-        const img = new Image();
-
-        img.onload = () => {
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
-            
-            canvas.toBlob((blob) => {
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'topology-diagram.png';
-                a.click();
-                URL.revokeObjectURL(url);
-            });
-        };
-
-        img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
-    }
-
-    downloadFile(content, filename, contentType) {
-        const a = document.createElement('a');
-        const file = new Blob([content], { type: contentType });
-
-        a.href = URL.createObjectURL(file);
-        a.download = filename;
-        a.click();
-
-        URL.revokeObjectURL(a.href);
     }
 }
 
