@@ -20,24 +20,6 @@ Enterprise IT teams face daily challenges:
 
 **RapidCMDB provides rapid "ground truth" discovery to reconcile your CMDBs in hours, not weeks.**
 
-## 💼 Real-World Impact
-
-### Enterprise IT Asset Audit
-```
-Before: Annual compliance audit required 3 weeks of manual device enumeration
-After:  2-hour RapidCMDB scan + 1 day reconciliation = audit-ready inventory
-Result: 95% time reduction, zero compliance findings, $200K cost avoidance
-```
-
-### M&A Due Diligence Success
-```
-Before: 6-month network integration delayed due to unknown infrastructure
-After:  RapidCMDB identified 847 devices across 23 sites in one weekend  
-Result: Accurate asset valuation, accelerated integration, informed decisions
-```
-
-
-
 ## 🚀 Core Capabilities
 
 ### ⚡ Rapid Asset Discovery
